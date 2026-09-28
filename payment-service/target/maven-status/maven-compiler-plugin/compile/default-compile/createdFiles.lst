@@ -1,8 +1,0 @@
-com\enterprise\fintech\payment\controller\PaymentStatusController.class
-com\enterprise\fintech\payment\legacy\LegacyCoreBankingSoaClient.class
-com\enterprise\fintech\payment\legacy\BdnsServiceResolver.class
-com\enterprise\fintech\payment\listener\PaymentOrderEventListener.class
-com\enterprise\fintech\payment\legacy\LegacyCoreBankingEjbBridge.class
-com\enterprise\fintech\payment\config\RedisConfig.class
-com\enterprise\fintech\payment\PaymentServiceApplication.class
-com\enterprise\fintech\payment\config\JmsConfig.class

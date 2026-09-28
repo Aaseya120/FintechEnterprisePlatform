@@ -10,7 +10,7 @@
 [![SonarQube Quality Gate](https://img.shields.io/badge/SonarQube-Passed-success.svg)](https://www.sonarqube.org/)
 [![Kubernetes](https://img.shields.io/badge/K8s-Production%20Ready-326CE5.svg)](https://kubernetes.io/)
 
-A production-grade **Enterprise Microservices Platform** engineered for a **Senior Java Developer / Technical Lead with 8+ years of experience**. This project demonstrates enterprise architecture best practices, distributed transactions (Transactional Outbox & Saga pattern), high-performance gRPC inter-service communication, distributed caching, reactive API gateways, centralized telemetry (Loki, Promtail, Zipkin), multi-cloud CI/CD pipelines, and a structured migration bridge from legacy **Java 8** to modern **Spring Boot 3.x on Java 17/21**.
+A production-grade **Enterprise Microservices Platform** engineered for a **Senior Java Developer / Microservices Developer with 8+ years of experience**. This project demonstrates enterprise architecture best practices, distributed transactions (Transactional Outbox & Saga pattern), high-performance gRPC inter-service communication, distributed caching, reactive API gateways, centralized telemetry (Loki, Promtail, Zipkin), multi-cloud CI/CD pipelines, and a structured migration bridge from legacy **Java 8** to modern **Spring Boot 3.x on Java 17/21**.
 
 ---
 

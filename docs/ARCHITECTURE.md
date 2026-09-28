@@ -1,6 +1,6 @@
 # Enterprise Microservices Architecture Specification
 
-This document details the high-level architecture, distributed transaction model, distributed tracing, and data storage design for the **Fintech Enterprise Platform**, tailored to the technical standard of a **Senior Java Developer / Technical Lead with 8+ years of experience**.
+This document details the high-level architecture, distributed transaction model, distributed tracing, and data storage design for the **Fintech Enterprise Platform**, tailored to the technical standard of a **Senior Java Developer / Microservices Developer with 8+ years of experience**.
 
 ---
 

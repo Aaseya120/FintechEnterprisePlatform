@@ -1,7 +1,7 @@
 # Jira Epics, User Stories & Confluence Technical Specs
 
 **Platform**: Fintech Enterprise Platform  
-**Target Role**: Senior Java Developer / Technical Lead (8+ Years Experience)  
+**Target Role**: Senior Java Developer / Microservices Developer (8+ Years Experience)  
 **Tools**: Atlassian Jira Software, Atlassian Confluence
 
 ---

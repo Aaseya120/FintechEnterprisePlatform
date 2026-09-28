@@ -59,30 +59,30 @@ flowchart TB
     BDNS --> GW
 
     %% Gateway Routing
-    GW -->|REST / JWT| OS
-    GW -->|REST / Admin| PS
+    GW -->|"REST / JWT"| OS
+    GW -->|"REST / Admin"| PS
 
     %% Inter-service synchronous & asynchronous
-    OS -->|gRPC HTTP/2 (Port 9090)| PS
-    OS -->|Publish Outbox Events| MQ
-    MQ -->|Consume Order Events| PS
-    PS -->|Trigger Compensation| MQ
-    MQ -->|Consume Compensation| OS
-    PS -->|SOA SOAP / EJB Bridge| LA
+    OS -->|"gRPC HTTP/2 (Port 9090)"| PS
+    OS -->|"Publish Outbox Events"| MQ
+    MQ -->|"Consume Order Events"| PS
+    PS -->|"Trigger Compensation"| MQ
+    MQ -->|"Consume Compensation"| OS
+    PS -->|"SOA SOAP / EJB Bridge"| LA
 
     %% Persistence flows
-    OS -->|JPA / JDBC| ORACLE
-    OS -->|Cache Order & Idem| REDIS
-    OS -->|Upload Invoices| MINIO
-    PS -->|Deduplication| REDIS
+    OS -->|"JPA / JDBC"| ORACLE
+    OS -->|"Cache Order & Idem"| REDIS
+    OS -->|"Upload Invoices"| MINIO
+    PS -->|"Deduplication"| REDIS
 
     %% Telemetry flows
-    GW -.->|Trace & Spans| ZIPKIN
-    OS -.->|Trace & Spans| ZIPKIN
-    PS -.->|Trace & Spans| ZIPKIN
-    GW -.->|Push Logs| LOKI
-    OS -.->|Push Logs| LOKI
-    PS -.->|Push Logs| LOKI
+    GW -.->|"Trace & Spans"| ZIPKIN
+    OS -.->|"Trace & Spans"| ZIPKIN
+    PS -.->|"Trace & Spans"| ZIPKIN
+    GW -.->|"Push Logs"| LOKI
+    OS -.->|"Push Logs"| LOKI
+    PS -.->|"Push Logs"| LOKI
     LOKI --> GRAFANA
 ```
 

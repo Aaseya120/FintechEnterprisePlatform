@@ -10,6 +10,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jms.core.JmsTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -32,7 +34,7 @@ public class OutboxPublisherJob {
     }
 
     @Scheduled(fixedDelayString = "${outbox.poll.interval-ms:5000}")
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
     public void publishOutboxEvents() {
         List<OutboxEvent> pendingEvents = outboxEventRepository.findPendingEvents();
         if (pendingEvents.isEmpty()) {

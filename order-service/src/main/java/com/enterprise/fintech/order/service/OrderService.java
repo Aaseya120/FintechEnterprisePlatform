@@ -17,6 +17,8 @@ import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -60,7 +62,7 @@ public class OrderService {
         return UUID.randomUUID().toString();
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     public OrderResponse createOrder(CreateOrderRequest request) {
         String traceId = getCurrentTraceId();
         log.info("[Trace: {}] Processing order creation for customer: {}, amount: {}",
@@ -143,6 +145,7 @@ public class OrderService {
         return OrderResponse.fromEntity(order);
     }
 
+    @Transactional(readOnly = true, isolation = Isolation.READ_COMMITTED)
     @Cacheable(value = "orders", key = "#orderReference")
     public OrderResponse getOrderByReference(String orderReference) {
         log.info("Fetching order {} from Database (Cache Miss)", orderReference);
@@ -151,7 +154,7 @@ public class OrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Order not found with reference: " + orderReference));
     }
 
-    @Transactional
+    @Transactional(propagation = Propagation.REQUIRED, isolation = Isolation.READ_COMMITTED)
     @CachePut(value = "orders", key = "#orderReference")
     public OrderResponse compensateOrder(String orderReference, String reason) {
         log.info("Saga Compensation: Cancelling order {} due to: {}", orderReference, reason);

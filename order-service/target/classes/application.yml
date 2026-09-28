@@ -1,0 +1,96 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: order-service
+  profiles:
+    active: dev
+
+  # Default Dev Profile: In-memory H2 with Oracle Mode for immediate testing
+  datasource:
+    url: jdbc:h2:mem:fintech_orders;DB_CLOSE_DELAY=-1;MODE=Oracle;DEFAULT_NULL_ORDERING=HIGH
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      '[hibernate.format_sql]': true
+
+  # Redis Configuration
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  # ActiveMQ Artemis Configuration
+  artemis:
+    broker-url: ${ACTIVEMQ_BROKER_URL:tcp://localhost:61616}
+    user: ${ACTIVEMQ_USER:admin}
+    password: ${ACTIVEMQ_PASSWORD:admin}
+    mode: native
+
+# MinIO Object Storage
+minio:
+  url: ${MINIO_URL:http://localhost:9000}
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket-name: fintech-invoices
+
+# gRPC Client to Payment Service
+grpc:
+  client:
+    payment-service:
+      address: static://${PAYMENT_GRPC_HOST:localhost}:${PAYMENT_GRPC_PORT:9090}
+      negotiation-type: plaintext
+
+# JWT Security
+jwt:
+  secret: EnterpriseSuperSecureSecretKeyThatIsAtLeast32BytesLong!
+
+# Outbox polling
+outbox:
+  poll:
+    interval-ms: 5000
+
+# Observability
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+
+logging:
+  loki:
+    url: ${LOKI_URL:http://localhost:3100/loki/api/v1/push}
+
+---
+# Oracle Database Profile (Enterprise Production)
+spring:
+  config:
+    activate:
+      on-profile: oracle
+  datasource:
+    url: ${ORACLE_JDBC_URL:jdbc:oracle:thin:@//localhost:1521/XEPDB1}
+    driver-class-name: oracle.jdbc.OracleDriver
+    username: ${ORACLE_USERNAME:fintech_user}
+    password: ${ORACLE_PASSWORD:fintech_pass}
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+  jpa:
+    database-platform: org.hibernate.dialect.OracleDialect
+    hibernate:
+      ddl-auto: validate

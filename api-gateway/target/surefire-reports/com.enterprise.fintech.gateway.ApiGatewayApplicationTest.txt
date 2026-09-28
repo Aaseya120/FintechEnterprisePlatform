@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.enterprise.fintech.gateway.ApiGatewayApplicationTest
+-------------------------------------------------------------------------------
+Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.339 s -- in com.enterprise.fintech.gateway.ApiGatewayApplicationTest

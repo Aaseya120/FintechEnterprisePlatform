@@ -1,0 +1,39 @@
+{
+  "properties": [
+    {
+      "name": "minio.url",
+      "type": "java.lang.String",
+      "description": "Endpoint URL for MinIO object storage."
+    },
+    {
+      "name": "minio.access-key",
+      "type": "java.lang.String",
+      "description": "Access key for MinIO authentication."
+    },
+    {
+      "name": "minio.secret-key",
+      "type": "java.lang.String",
+      "description": "Secret key for MinIO authentication."
+    },
+    {
+      "name": "minio.bucket-name",
+      "type": "java.lang.String",
+      "description": "Default bucket name for invoices."
+    },
+    {
+      "name": "jwt.secret",
+      "type": "java.lang.String",
+      "description": "HMAC secret key used for signing and verifying JWT tokens."
+    },
+    {
+      "name": "outbox.poll.interval-ms",
+      "type": "java.lang.Long",
+      "description": "Polling interval in milliseconds for transactional outbox table."
+    },
+    {
+      "name": "logging.loki.url",
+      "type": "java.lang.String",
+      "description": "Endpoint URL for Grafana Loki HTTP push API."
+    }
+  ]
+}

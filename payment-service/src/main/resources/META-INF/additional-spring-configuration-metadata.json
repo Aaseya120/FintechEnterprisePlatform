@@ -1,0 +1,9 @@
+{
+  "properties": [
+    {
+      "name": "logging.loki.url",
+      "type": "java.lang.String",
+      "description": "Endpoint URL for Grafana Loki HTTP push API."
+    }
+  ]
+}

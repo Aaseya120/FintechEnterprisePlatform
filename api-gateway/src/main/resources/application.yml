@@ -1,0 +1,61 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+  cloud:
+    gateway:
+      routes:
+        # Route to Order Service
+        - id: order-service-route
+          uri: ${ORDER_SERVICE_URI:http://localhost:8081}
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                '[redis-rate-limiter.replenishRate]': 10
+                '[redis-rate-limiter.burstCapacity]': 20
+                key-resolver: "#{@userOrIpKeyResolver}"
+
+        # Route to Payment Service REST fallback/admin
+        - id: payment-service-route
+          uri: ${PAYMENT_SERVICE_URI:http://localhost:8082}
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                '[redis-rate-limiter.replenishRate]': 5
+                '[redis-rate-limiter.burstCapacity]': 10
+                key-resolver: "#{@userOrIpKeyResolver}"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411/api/v2/spans}
+
+jwt:
+  secret: EnterpriseSuperSecureSecretKeyThatIsAtLeast32BytesLong!
+  expiration-ms: 86400000
+
+logging:
+  level:
+    root: INFO
+    '[org.springframework.cloud.gateway]': INFO
+    '[org.springframework.security]': INFO
+    '[com.enterprise.fintech]': DEBUG

@@ -1,0 +1,17 @@
+# Stage 1: Build
+FROM eclipse-temurin:17-jdk-alpine AS builder
+WORKDIR /workspace
+COPY pom.xml .
+COPY common-contracts common-contracts
+COPY order-service order-service
+COPY legacy-core-accounting legacy-core-accounting
+RUN ./mvnw clean package -pl order-service -am -DskipTests || mvn clean package -pl order-service -am -DskipTests
+
+# Stage 2: Runtime
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+COPY --from=builder /workspace/order-service/target/*.jar app.jar
+EXPOSE 8081
+ENTRYPOINT ["java", "-XX:+UseG1GC", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

@@ -1,0 +1,16 @@
+# Stage 1: Build
+FROM eclipse-temurin:17-jdk-alpine AS builder
+WORKDIR /workspace
+COPY pom.xml .
+COPY common-contracts common-contracts
+COPY payment-service payment-service
+RUN ./mvnw clean package -pl payment-service -am -DskipTests || mvn clean package -pl payment-service -am -DskipTests
+
+# Stage 2: Runtime
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+COPY --from=builder /workspace/payment-service/target/*.jar app.jar
+EXPOSE 8082 9090
+ENTRYPOINT ["java", "-XX:+UseG1GC", "-XX:MaxRAMPercentage=75.0", "-jar", "app.jar"]

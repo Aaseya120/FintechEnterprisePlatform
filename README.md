@@ -1,249 +1,184 @@
-# Core Banking Microservices Platform
+# 🏦 Enterprise Core Banking Microservices Platform
 
-A production-grade, enterprise financial microservices ecosystem built with **Java 21**, **Spring Boot 3.3.4**, **Spring Cloud Gateway**, **Apache Kafka**, **Redis / AWS ElastiCache**, **PostgreSQL / Oracle 19c**, and deployed to **Kubernetes / AWS EKS**.
+[![Java 21](https://img.shields.io/badge/Java-21%20LTS-orange.svg)](https://openjdk.org/projects/jdk/21/)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.3.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
+[![Spring Cloud](https://img.shields.io/badge/Spring%20Cloud-2023.0.3-blue.svg)](https://spring.io/projects/spring-cloud)
+[![Kafka](https://img.shields.io/badge/Apache%20Kafka-KRaft%203.6-black.svg)](https://kafka.apache.org/)
+[![Docker & K8s](https://img.shields.io/badge/Kubernetes-EKS%201.30-326CE5.svg)](https://kubernetes.io/)
+[![AWS](https://img.shields.io/badge/AWS-Terraform%20IaC-FF9900.svg)](https://aws.amazon.com/)
+
+A production-grade core banking platform built with **Java 21 Virtual Threads**, **Spring Boot 3.3**, and **Spring Cloud Gateway**, engineered for low-latency financial transactions, multi-rail payments, automated reconciliation, and legacy mainframe interoperability.
 
 ---
 
-## 🏛️ Architecture Overview
+## 🏛️ System Architecture
 
 ```mermaid
 graph TD
-    Client["Digital Channels (iOS / Android / Web)"] -->|HTTPS / WSS| APIGW["API Gateway (Spring Cloud Gateway :8080)<br/>- Keycloak JWT & RBAC<br/>- Redis Token Bucket Rate Limiting<br/>- Correlation ID & Channel Tracking"]
+    Client["Digital Channels (iOS / Android / Web)"] -->|HTTPS / WSS| APIGW["API Gateway (:8080)<br/>Keycloak JWT • Redis Token Bucket Rate Limiting"]
     
-    APIGW -->|REST / OpenAPI| AccountSvc["Account Service (:8081)<br/>- Java 21 Virtual Threads<br/>- REST & GraphQL (/graphql)<br/>- Redis / ElastiCache Caching<br/>- Flyway + Composite Indexes<br/>- Pessimistic Concurrency Lock"]
-    APIGW -->|REST / OpenAPI| PaymentSvc["Payment Service (:8082)<br/>- Idempotency Engine (@Idempotent)<br/>- Saga Orchestrator<br/>- Transactional Outbox Pattern<br/>- Resilience4j Circuit Breaker & Retry"]
-    APIGW -->|REST / OpenAPI| ForexSvc["Exchange Rate Service (:8083)<br/>- Low-latency Currency Conversion<br/>- Redis Cache-Aside & TTL<br/>- Fallback Protection"]
+    APIGW -->|REST / GraphQL| Acc["Account Service (:8081)<br/>GraphQL • SOAP • CBS SOA Bridge"]
+    APIGW -->|REST| Pay["Payment Service (:8082)<br/>Saga Orchestrator • Outbox • Multi-Gateways"]
+    APIGW -->|REST| Fx["Exchange Rate Service (:8083)<br/>Dynamic FX Engine • Redis Cache"]
+    APIGW -->|REST| Cust["Customer Service (:8084)<br/>Onboarding • KYC (AES-256-GCM)"]
+    APIGW -->|REST| Card["Card Service (:8085)<br/>Luhn PAN • PIN Hashing • Controls"]
+    APIGW -->|REST| Loan["Loan Service (:8086)<br/>Underwriting • EMI Amortization"]
+    APIGW -->|REST| Fraud["Fraud Detection (:8087)<br/>Redis Velocity • Geo-Travel Rules"]
+    APIGW -->|REST| Rep["Reporting Service (:8089)<br/>PDF • Excel • CSV Exports"]
+    APIGW -->|REST| Batch["Batch Service (:8090)<br/>Spring Batch 5 • Oracle Reconciliation"]
 
-    PaymentSvc -->|Circuit Breaker & Retry| AccountSvc
-    PaymentSvc -->|Transactional Outbox Poller| Kafka["Apache Kafka Cluster (KRaft)"]
-    Kafka -->|Reliable Events| PaymentConsumer["Payment Audit & Ledger Consumers"]
+    Pay -->|Outbox Poller| Kafka["Apache Kafka Cluster"]
+    Kafka -->|Async Events| Notif["Notification Service (:8088)<br/>SMS • Email • Push"]
 
-    AccountSvc --> DB[(PostgreSQL / Oracle 19c)]
-    PaymentSvc --> DB
-    AccountSvc --> Redis[(Redis / AWS ElastiCache)]
-    PaymentSvc --> Redis
-    ForexSvc --> Redis
+    Acc --> DB[(PostgreSQL & Oracle 19c)]
+    Pay --> DB
+    Acc --> Redis[(Redis / ElastiCache)]
+    Pay --> Redis
+    Fx --> Redis
 
-    Prometheus["Prometheus (:9090)"] -->|Scrapes /actuator/prometheus| APIGW
-    Prometheus -->|Scrapes /actuator/prometheus| AccountSvc
-    Prometheus -->|Scrapes /actuator/prometheus| PaymentSvc
-    Prometheus -->|Scrapes /actuator/prometheus| ForexSvc
-    Grafana["Grafana Dashboards (:3000)"] --> Prometheus
+    Acc -->|SOAP XML Bridge| LegacyCBS["Legacy Core Banking (Mainframe / Finacle)"]
 ```
 
 ---
 
-## 🚀 Mapping to Core Banking Resume Highlights
+## 📦 Microservices Directory
 
-| Resume / Project Module | Tech Stack & Capabilities | Codebase Implementation Location |
-| :--- | :--- | :--- |
-| **High-Throughput REST & GraphQL Core Banking APIs** | Java 21, Spring Boot 3.3, Virtual Threads, GraphQL, OpenAPI 3 | [`AccountRestController`](file:///d:/Projects/Resume_Project/account-service/src/main/java/com/banking/account/controller/AccountRestController.java), [`AccountGraphQLController`](file:///d:/Projects/Resume_Project/account-service/src/main/java/com/banking/account/controller/AccountGraphQLController.java) |
-| **Legacy CBS SOAP Web Services & Oracle 19c PL/SQL** | Spring-WS, WSDL, XSD, Oracle 19c PL/SQL Bulk Collect & FORALL | [`AccountSoapEndpoint`](file:///d:/Projects/Resume_Project/account-service/src/main/java/com/banking/account/soap/AccountSoapEndpoint.java), [`PKG_BANKING_CORE.sql`](file:///d:/Projects/Resume_Project/account-service/src/main/resources/db/oracle/PKG_BANKING_CORE.sql) |
-| **Digital Customer Onboarding & KYC Management** | Spring Data JPA, Flyway, Document Verification, Risk Tiers | [`CustomerService`](file:///d:/Projects/Resume_Project/customer-service/src/main/java/com/banking/customer/service/CustomerService.java), [`CustomerKycService`](file:///d:/Projects/Resume_Project/customer-service/src/main/java/com/banking/customer/service/CustomerKycService.java) |
-| **Beneficiary Management & 4-Hour Cooling Periods** | Transaction Caps, Cooling Windows, Intra/Inter-Bank Routing | [`BeneficiaryService`](file:///d:/Projects/Resume_Project/customer-service/src/main/java/com/banking/customer/service/BeneficiaryService.java) |
-| **Multi-Channel Payments (UPI, Cards, NetBanking, PayPal)** | Strategy Pattern, Luhn Algorithm, 3DS, VPA/RRN, NEFT/RTGS/IMPS | [`PaymentGatewayManager`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/gateway/PaymentGatewayManager.java), [`UpiPaymentProcessor`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/gateway/processors/UpiPaymentProcessor.java), [`CardPaymentProcessor`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/gateway/processors/CardPaymentProcessor.java), [`NetBankingPaymentProcessor`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/gateway/processors/NetBankingPaymentProcessor.java), [`PayPalPaymentProcessor`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/gateway/processors/PayPalPaymentProcessor.java) |
-| **Distributed Saga Orchestration & Transactional Outbox** | Apache Kafka (KRaft), Saga Orchestration, Outbox Poller, At-Least-Once | [`TransferSagaOrchestrator`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/saga/TransferSagaOrchestrator.java), [`OutboxPollerService`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/outbox/OutboxPollerService.java) |
-| **Loan Management, Underwriting & EMI Amortization** | Mathematical EMI formula, Approval Lifecycle, Disbursal Schedule | [`LoanService`](file:///d:/Projects/Resume_Project/loan-service/src/main/java/com/banking/loan/service/LoanService.java), [`LoanController`](file:///d:/Projects/Resume_Project/loan-service/src/main/java/com/banking/loan/controller/LoanController.java) |
-| **Debit & Credit Cards & Security Controls** | Luhn PAN Generator, Contactless/International toggles, PIN hashing | [`CardService`](file:///d:/Projects/Resume_Project/card-service/src/main/java/com/banking/card/service/CardService.java), [`CardController`](file:///d:/Projects/Resume_Project/card-service/src/main/java/com/banking/card/controller/CardController.java) |
-| **Real-Time Fraud Detection & Risk Management** | Redis Sliding Window Velocity, Impossible Travel Anomaly, Scoring Rules | [`FraudRuleEngine`](file:///d:/Projects/Resume_Project/fraud-detection-service/src/main/java/com/banking/fraud/service/FraudRuleEngine.java), [`FraudDetectionController`](file:///d:/Projects/Resume_Project/fraud-detection-service/src/main/java/com/banking/fraud/controller/FraudDetectionController.java) |
-| **Omni-Channel Customer Notifications & Audit Logging** | SMS, Email, Mobile Push (FCM/APNS), Kafka Consumer, Regulatory Audit | [`NotificationManager`](file:///d:/Projects/Resume_Project/notification-service/src/main/java/com/banking/notification/service/NotificationManager.java), [`NotificationKafkaConsumer`](file:///d:/Projects/Resume_Project/notification-service/src/main/java/com/banking/notification/kafka/NotificationKafkaConsumer.java) |
-| **Transaction History, Statements & Turnover Analytics** | Multi-criteria filtering, CSV Ledger Export, Cash Flow Summaries | [`ReportingService`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/service/ReportingService.java), [`ReportingController`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/controller/ReportingController.java) |
-| **Transaction History Multi-Format Export (PDF, Excel, CSV, JSON)** | OpenPDF, Apache POI 5.3, Strategy Pattern, Factory Pattern, Facade Pattern | [`TransactionReportingFacade`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/facade/TransactionReportingFacade.java), [`ExportStrategyFactory`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/export/ExportStrategyFactory.java), [`PdfExportStrategy`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/export/strategies/PdfExportStrategy.java), [`ExcelExportStrategy`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/export/strategies/ExcelExportStrategy.java) |
-| **Transaction History Multi-Format Import (Excel .xlsx, CSV)** | Apache POI, CSV parser, Batch validation, Strategy Pattern | [`ImportParserFactory`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/importing/ImportParserFactory.java), [`ExcelTransactionImportParser`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/importing/parsers/ExcelTransactionImportParser.java), [`CsvTransactionImportParser`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/importing/parsers/CsvTransactionImportParser.java) |
-| **Automated Clearing Reconciliation & Break Resolution** | Strategy & Factory Patterns, Tolerance Windows, Break Tracking & Audit | [`ReconciliationFacade`](file:///d:/Projects/Resume_Project/batch-service/src/main/java/com/banking/batch/reconciliation/facade/ReconciliationFacade.java), [`ReconciliationRuleFactory`](file:///d:/Projects/Resume_Project/batch-service/src/main/java/com/banking/batch/reconciliation/factory/ReconciliationRuleFactory.java), [`ExactReferenceReconciliationStrategy`](file:///d:/Projects/Resume_Project/batch-service/src/main/java/com/banking/batch/reconciliation/strategy/ExactReferenceReconciliationStrategy.java), [`ToleranceWindowReconciliationStrategy`](file:///d:/Projects/Resume_Project/batch-service/src/main/java/com/banking/batch/reconciliation/strategy/ToleranceWindowReconciliationStrategy.java) |
-| **Data Encryption Policies (At Rest & In Transit)** | AES-256-GCM Column Encryption Converter, PCI-DSS / GDPR Masking Util | [`AesGcmCryptoService`](file:///d:/Projects/Resume_Project/banking-common/src/main/java/com/banking/common/crypto/AesGcmCryptoService.java), [`EncryptedStringConverter`](file:///d:/Projects/Resume_Project/banking-common/src/main/java/com/banking/common/crypto/EncryptedStringConverter.java), [`DataMaskingUtil`](file:///d:/Projects/Resume_Project/banking-common/src/main/java/com/banking/common/crypto/DataMaskingUtil.java) |
-| **Spring Batch & High-Volume File Ingestion** | Spring Batch 5, Multi-threaded Chunk Processing, Oracle PL/SQL MERGE | [`ClearingBatchJobConfig`](file:///d:/Projects/Resume_Project/batch-service/src/main/java/com/banking/batch/config/ClearingBatchJobConfig.java), [`OracleProcedureService`](file:///d:/Projects/Resume_Project/batch-service/src/main/java/com/banking/batch/procedure/OracleProcedureService.java) |
-| **API Gateway, Security & Rate Limiting** | Spring Cloud Gateway, Keycloak OAuth2 JWT, Redis Token Bucket | [`SecurityConfig`](file:///d:/Projects/Resume_Project/api-gateway/src/main/java/com/banking/gateway/config/SecurityConfig.java), [`RateLimiterConfig`](file:///d:/Projects/Resume_Project/api-gateway/src/main/java/com/banking/gateway/ratelimit/RateLimiterConfig.java) |
-| **Resilience & Fault Tolerance** | Resilience4j Circuit Breaker, Retries with backoff, Timeouts, Fallbacks | [`AccountClient`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/client/AccountClient.java), [`ExchangeRateService`](file:///d:/Projects/Resume_Project/exchange-rate-service/src/main/java/com/banking/exchange/service/ExchangeRateService.java) |
-| **Distributed Idempotency Engine** | Redis atomic setIfAbsent, SHA-256 Digest Verification, Result Caching | [`@Idempotent`](file:///d:/Projects/Resume_Project/banking-common/src/main/java/com/banking/common/idempotency/Idempotent.java), [`IdempotencyService`](file:///d:/Projects/Resume_Project/banking-common/src/main/java/com/banking/common/idempotency/IdempotencyService.java) |
-| **Legacy CBS SOA Middleware & Canonical Adapter** | Spring-WS, SOAP XML, WS-Security Headers, Canonical Model, Circuit Breaker | [`LegacyCbsMiddlewareGateway`](file:///d:/Projects/Resume_Project/account-service/src/main/java/com/banking/account/middleware/LegacyCbsMiddlewareGateway.java), [`LegacyCbsMiddlewareController`](file:///d:/Projects/Resume_Project/account-service/src/main/java/com/banking/account/middleware/LegacyCbsMiddlewareController.java), [`CbsSoapEnvelopeBuilder`](file:///d:/Projects/Resume_Project/account-service/src/main/java/com/banking/account/middleware/CbsSoapEnvelopeBuilder.java) |
-| **AWS Cloud Infrastructure as Code (Terraform)** | Terraform, AWS EKS 1.30, RDS Aurora & Oracle 19c, ElastiCache, MSK, S3 KMS | [`aws/terraform/`](file:///d:/Projects/Resume_Project/aws/terraform/), [`eks.tf`](file:///d:/Projects/Resume_Project/aws/terraform/eks.tf), [`rds.tf`](file:///d:/Projects/Resume_Project/aws/terraform/rds.tf), [`elasticache.tf`](file:///d:/Projects/Resume_Project/aws/terraform/elasticache.tf), [`msk.tf`](file:///d:/Projects/Resume_Project/aws/terraform/msk.tf) |
-| **DevOps, Kubernetes (EKS), Docker & Helm** | Multi-stage Temurin 21 JRE, Helm Charts, HPA, PDB, Rolling Updates | [`Dockerfile`](file:///d:/Projects/Resume_Project/Dockerfile), [`helm/banking-platform/`](file:///d:/Projects/Resume_Project/helm/banking-platform/), [`docker-compose.yml`](file:///d:/Projects/Resume_Project/docker-compose.yml) |
-| **CI/CD Automation & Code Quality** | GitHub Actions & Jenkins with SonarQube Quality Gate & OWASP Scan | [`.github/workflows/ci-cd.yml`](file:///d:/Projects/Resume_Project/.github/workflows/ci-cd.yml), [`Jenkinsfile`](file:///d:/Projects/Resume_Project/Jenkinsfile) |
-| **Monitoring, Observability & RCA** | Actuator, Prometheus, Grafana, Splunk queries, AppDynamics APM | [`prometheus.yml`](file:///d:/Projects/Resume_Project/docker/prometheus/prometheus.yml), [`banking-metrics-dashboard.json`](file:///d:/Projects/Resume_Project/docker/grafana/provisioning/dashboards/banking-metrics-dashboard.json), [`PRODUCTION_SUPPORT_RCA_RUNBOOK.md`](file:///d:/Projects/Resume_Project/docs/PRODUCTION_SUPPORT_RCA_RUNBOOK.md) |
+| Service | Port | Primary Responsibilities | Key Tech Stack |
+| :--- | :---: | :--- | :--- |
+| [**api-gateway**](file:///d:/Projects/Resume_Project/api-gateway) | `8080` | Keycloak JWT Auth, RBAC, Redis Token-Bucket rate limiting | Spring Cloud Gateway, WebFlux, Redis |
+| [**account-service**](file:///d:/Projects/Resume_Project/account-service) | `8081` | Ledger balance, GraphQL API, CBS SOA Middleware Bridge | Spring Data JPA, GraphQL, Spring-WS SOAP |
+| [**payment-service**](file:///d:/Projects/Resume_Project/payment-service) | `8082` | Distributed fund transfers, 2-phase Saga, Multi-rail gateways | Kafka, Outbox Pattern, Strategy Pattern |
+| [**exchange-rate-service**](file:///d:/Projects/Resume_Project/exchange-rate-service) | `8083` | Global currencies, dynamic interbank FX ticker, quotes | Redis Cache, Scheduled Brownian motion |
+| [**customer-service**](file:///d:/Projects/Resume_Project/customer-service) | `8084` | Digital onboarding, KYC lifecycle, Beneficiary cooling-off | AES-256-GCM Crypto, Flyway |
+| [**card-service**](file:///d:/Projects/Resume_Project/card-service) | `8085` | Debit/Credit issuance, Luhn check digit, PIN hashing | SHA-256, PCI-DSS Masking |
+| [**loan-service**](file:///d:/Projects/Resume_Project/loan-service) | `8086` | Loan underwriting, mathematical EMI formula, amortization | Spring Data JPA, Amortization Math |
+| [**fraud-detection-service**](file:///d:/Projects/Resume_Project/fraud-detection-service) | `8087` | Real-time sliding window velocity rules, risk decisions | Redis Sorted Sets, Risk Rule Engine |
+| [**notification-service**](file:///d:/Projects/Resume_Project/notification-service) | `8088` | Omni-channel alerts (SMS, Email, Push FCM/APNS) | Kafka Consumer, Twilio/SendGrid mock |
+| [**reporting-service**](file:///d:/Projects/Resume_Project/reporting-service) | `8089` | Statement export (PDF, Excel, CSV, JSON) and import | OpenPDF, Apache POI 5.3, Strategy Pattern |
+| [**batch-service**](file:///d:/Projects/Resume_Project/batch-service) | `8090` | High-volume clearing ingestion, Oracle PL/SQL, reconciliation | Spring Batch 5, Oracle 19c PL/SQL |
+| [**banking-common**](file:///d:/Projects/Resume_Project/banking-common) | - | Shared DTOs, AES-GCM crypto, masking util, `@Idempotent` | Reusable Java 21 Enterprise Library |
 
 ---
 
-## 🎨 Enterprise Design Patterns in Action
+## ⚡ Quick Start
 
-| Design Pattern | Purpose & Implementation | Microservice Classes |
-| :--- | :--- | :--- |
-| **Strategy Pattern** | Pluggable algorithms for statement export (PDF, Excel, CSV, JSON), multi-format import parsers (.xlsx, .csv), payment rail processors (UPI, Cards, NetBanking, PayPal), and reconciliation matching rules (Exact vs. Tolerance). | [`TransactionExportStrategy`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/export/TransactionExportStrategy.java), [`TransactionImportParser`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/importing/TransactionImportParser.java), [`PaymentGatewayStrategy`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/gateway/PaymentGatewayStrategy.java), [`ReconciliationRuleStrategy`](file:///d:/Projects/Resume_Project/batch-service/src/main/java/com/banking/batch/reconciliation/strategy/ReconciliationRuleStrategy.java) |
-| **Facade Pattern** | Encapsulates complex subsystems into clean, single-point-of-entry business facades hiding multi-step transformations, queries, and external integrations. | [`TransactionReportingFacade`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/facade/TransactionReportingFacade.java), [`ReconciliationFacade`](file:///d:/Projects/Resume_Project/batch-service/src/main/java/com/banking/batch/reconciliation/facade/ReconciliationFacade.java) |
-| **Factory Pattern** | Decouples caller code from concrete strategy instances, providing instant resolution based on enums or runtime parameters. | [`ExportStrategyFactory`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/export/ExportStrategyFactory.java), [`ImportParserFactory`](file:///d:/Projects/Resume_Project/reporting-service/src/main/java/com/banking/reporting/importing/ImportParserFactory.java), [`ReconciliationRuleFactory`](file:///d:/Projects/Resume_Project/batch-service/src/main/java/com/banking/batch/reconciliation/factory/ReconciliationRuleFactory.java), [`PaymentGatewayManager`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/gateway/PaymentGatewayManager.java) |
-| **Singleton Pattern** | Enforced across all microservices using Spring IoC singleton scope, immutability, thread-safe memory models, and constructor injection. | Default singleton lifecycle across all `@Service`, `@Component`, and `@Configuration` beans. |
-
----
-
-## 🔐 Sensitive Data Encryption & Masking Policies
-
-1. **Column-Level Attribute Encryption at Rest (AES-256-GCM):**
-   - [`AesGcmCryptoService`](file:///d:/Projects/Resume_Project/banking-common/src/main/java/com/banking/common/crypto/AesGcmCryptoService.java) generates a cryptographically secure 96-bit random IV for every encryption call and performs Galois/Counter Mode authenticated encryption with integrity checking.
-   - [`EncryptedStringConverter`](file:///d:/Projects/Resume_Project/banking-common/src/main/java/com/banking/common/crypto/EncryptedStringConverter.java) applies transparent JPA `@Convert` to sensitive entity fields like government identification numbers ([`CustomerKyc.idNumber`](file:///d:/Projects/Resume_Project/customer-service/src/main/java/com/banking/customer/domain/CustomerKyc.java)), preventing plaintext leaks in database dumps and logs.
-2. **PCI-DSS & GDPR Masking Policies:**
-   - [`DataMaskingUtil`](file:///d:/Projects/Resume_Project/banking-common/src/main/java/com/banking/common/crypto/DataMaskingUtil.java) enforces standardized masking across all API responses, reports, and UI exports:
-     - **Credit / Debit Cards:** `4532-****-****-1098`
-     - **Bank Accounts:** `****9012`
-     - **Email Addresses:** `j***e@domain.com`
-     - **SSN / National IDs:** `***-**-6789`
-
----
-
-## ⚡ Quick Start: Running Locally
-
-### 1. Start Infrastructure via Docker Compose
+### 1. Launch Infrastructure
 ```bash
 docker compose up -d banking-db banking-redis banking-kafka banking-keycloak banking-prometheus banking-grafana
 ```
 
-### 2. Build the Complete Maven Multi-Module Project
+### 2. Build Solution
 ```bash
 mvn clean install -DskipTests
 ```
 
 ### 3. Run Microservices
 ```bash
-# Terminal 1: API Gateway (:8080)
+# Terminal 1: API Gateway
 mvn spring-boot:run -pl api-gateway
 
-# Terminal 2: Account Microservice (REST, SOAP CBS & GraphQL :8081)
+# Terminal 2: Account Service (Core Ledger & CBS Bridge)
 mvn spring-boot:run -pl account-service
 
-# Terminal 3: Payment Microservice (Saga Orchestration & Multi-Rail Gateway :8082)
+# Terminal 3: Payment Service (Transfers & Saga)
 mvn spring-boot:run -pl payment-service
 
-# Terminal 4: Reporting & Export/Import Service (:8086)
-mvn spring-boot:run -pl reporting-service
-
-# Terminal 5: Spring Batch & Reconciliation Service (:8087)
-mvn spring-boot:run -pl batch-service
+# Terminal 4: Forex Service (Dynamic Rates)
+mvn spring-boot:run -pl exchange-rate-service
 ```
 
 ---
 
-## 🔒 Example API Operations
+## 💡 Core Banking Capabilities
 
-### 1. Multi-Format Transaction History Export (PDF, Excel, CSV, JSON)
+- **Multi-Rail Payment Gateways:** Strategy Pattern implementation for **UPI** (VPA/RRN), **Cards** (3DS/Luhn), **NetBanking** (NEFT, RTGS, IMPS), and **PayPal**.
+- **Distributed Saga & Outbox:** At-least-once transactional Kafka event publishing with automated compensation debit/credit rollbacks.
+- **Legacy CBS SOA Middleware:** Acts as an enterprise integration adapter bridging modern REST/GraphQL microservices to legacy Core Banking mainframes via SOAP XML envelopes with WS-Security headers and Resilience4j circuit breakers.
+- **Global Currencies & Dynamic FX:** ISO-4217 world currencies and ISO-3166 countries with IBAN/SWIFT validation, live interbank rate fluctuations with Bid/Ask spreads, and 60-second guaranteed quotes.
+- **Automated Clearing Reconciliation:** Automated matching between core ledgers and external clearing feeds with Exact Match and Tolerance Window rules, break tracking, and audit resolution workflows.
+- **Data Encryption & PCI-DSS Masking:** AES-256-GCM attribute encryption for sensitive KYC identification numbers, combined with centralized masking for PANs, account numbers, and emails.
+
+---
+
+## 🔍 Interactive API Testing (Swagger & Actuator)
+
+| Microservice | Interactive Swagger UI | Health Check |
+| :--- | :--- | :--- |
+| **API Gateway** | [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) | [http://localhost:8080/actuator/health](http://localhost:8080/actuator/health) |
+| **Account Service** | [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html) | [http://localhost:8081/actuator/health](http://localhost:8081/actuator/health) |
+| **Payment Service** | [http://localhost:8082/swagger-ui.html](http://localhost:8082/swagger-ui.html) | [http://localhost:8082/actuator/health](http://localhost:8082/actuator/health) |
+| **Exchange Rate Service**| [http://localhost:8083/swagger-ui.html](http://localhost:8083/swagger-ui.html) | [http://localhost:8083/actuator/health](http://localhost:8083/actuator/health) |
+| **Reporting Service** | [http://localhost:8089/swagger-ui.html](http://localhost:8089/swagger-ui.html) | [http://localhost:8089/actuator/health](http://localhost:8089/actuator/health) |
+| **Batch Service** | [http://localhost:8090/swagger-ui.html](http://localhost:8090/swagger-ui.html) | [http://localhost:8090/actuator/health](http://localhost:8090/actuator/health) |
+| **Grafana Dashboards** | [http://localhost:3000](http://localhost:3000) (admin / admin) | Prometheus Metrics at `:9090` |
+
+---
+
+## 🛠️ API & Cloud Deep Dive (Click to Expand)
+
+<details>
+<summary><b>1. Multi-Format Statement Exports (PDF, Excel, CSV)</b></summary>
+
 ```bash
-# Export formatted PDF Statement with bank headers & styling
+# Export PDF Statement with bank headers & styling
 curl -X GET "http://localhost:8080/api/v1/reports/transactions/export?accountNumber=US1000000001&format=PDF" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>" -o account_statement.pdf
+  -H "Authorization: Bearer <KEYCLOAK_JWT>" -o statement.pdf
 
-# Export Excel .xlsx Statement with formulas and headers
+# Export Excel .xlsx Statement with formulas
 curl -X GET "http://localhost:8080/api/v1/reports/transactions/export?accountNumber=US1000000001&format=EXCEL" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>" -o account_statement.xlsx
-
-# Export CSV format
-curl -X GET "http://localhost:8080/api/v1/reports/transactions/export?accountNumber=US1000000001&format=CSV" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>" -o account_statement.csv
+  -H "Authorization: Bearer <KEYCLOAK_JWT>" -o statement.xlsx
 ```
+</details>
 
-### 2. Import External Clearing File (Excel / CSV)
+<details>
+<summary><b>2. Dynamic Foreign Exchange & Beneficiary Validation</b></summary>
+
 ```bash
-curl -X POST http://localhost:8080/api/v1/reports/transactions/import \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>" \
-  -F "file=@clearing_feed_daily.xlsx"
-```
+# Query ISO-4217 world currencies
+curl -X GET http://localhost:8080/api/v1/exchange-rates/currencies
 
-### 3. Run Automated Reconciliation Process
-```bash
-# Run reconciliation with EXACT_MATCH or TOLERANCE_WINDOW
-curl -X POST "http://localhost:8080/api/v1/reconciliation/run?ruleType=EXACT_MATCH" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>"
-
-# View detected open breaks
-curl -X GET "http://localhost:8080/api/v1/reconciliation/breaks/open" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>"
-
-# Resolve a detected break
-curl -X POST "http://localhost:8080/api/v1/reconciliation/breaks/<BREAK_ID>/resolve" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>" \
-  -d '{
-    "resolutionStatus": "RESOLVED",
-    "resolvedBy": "AUDITOR_EMP_441",
-    "notes": "Verified against Swift MT940 bank statement. Variance due to $1.25 clearing fee."
-  }'
-```
-
-### 4. Initiate Idempotent Financial Fund Transfer
-```bash
-curl -X POST http://localhost:8080/api/v1/payments/transfer \
-  -H "Content-Type: application/json" \
-  -H "Idempotency-Key: 9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d" \
-  -H "X-Correlation-ID: c8f2a1b9-7d84-4e4b-9231-50e4177c8e99" \
-  -H "X-Channel: IOS" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT_TOKEN>" \
-  -d '{
-    "sourceAccountNumber": "US1000000001",
-    "targetAccountNumber": "US2000000002",
-    "amount": 250.00,
-    "currency": "USD"
-  }'
-```
-
-### 5. Global Currencies, Country Codes & Dynamic FX Operations
-```bash
-# Query all ISO-4217 world currencies
-curl -X GET http://localhost:8080/api/v1/exchange-rates/currencies \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>"
-
-# Query all countries with IBAN rules, phone codes, and SWIFT prefixes
-curl -X GET http://localhost:8080/api/v1/exchange-rates/countries \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>"
-
-# Validate cross-border beneficiary (IBAN format check & currency compatibility)
+# Validate International Beneficiary IBAN & SWIFT
 curl -X POST http://localhost:8080/api/v1/exchange-rates/validate-beneficiary \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>" \
-  -d '{
-    "countryCode": "DE",
-    "currencyCode": "EUR",
-    "accountNumberOrIban": "DE89370400440532013000",
-    "swiftBic": "DEUTDEDDFXX"
-  }'
+  -d '{"countryCode":"DE","currencyCode":"EUR","accountNumberOrIban":"DE89370400440532013000","swiftBic":"DEUTDEDDFXX"}'
 
-# Get live interbank rates with Bid, Ask, Mid, and Spread %
-curl -X GET http://localhost:8080/api/v1/exchange-rates/live \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>"
-
-# Lock guaranteed 60-second rate quote for fund transfer
-curl -X POST http://localhost:8080/api/v1/exchange-rates/quote \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>" \
-  -d '{
-    "fromCurrency": "USD",
-    "toCurrency": "EUR",
-    "amount": 10000.00,
-    "beneficiaryCountryCode": "DE"
-  }'
-
-# Trigger live market dynamic rate fluctuation tick (simulating Reuters/Bloomberg FX feed)
-curl -X POST http://localhost:8080/api/v1/exchange-rates/fluctuate \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>"
+# Simulate live interbank rate fluctuation tick
+curl -X POST http://localhost:8080/api/v1/exchange-rates/fluctuate
 ```
+</details>
 
-### 6. Oracle 19c Enterprise PL/SQL Execution
+<details>
+<summary><b>3. Automated Reconciliation & Break Resolution</b></summary>
+
 ```bash
-# Invoke Oracle PL/SQL Bulk Interest Accrual (BULK COLLECT & FORALL)
-curl -X POST "http://localhost:8080/api/v1/batch/oracle/accrue-interest?batchSize=5000" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>"
+# Trigger reconciliation run (EXACT_MATCH or TOLERANCE_WINDOW)
+curl -X POST "http://localhost:8080/api/v1/reconciliation/run?ruleType=EXACT_MATCH"
 
-# Invoke Oracle PL/SQL End-Of-Day (EOD) Double-Entry Zero-Sum Reconciliation
-curl -X POST "http://localhost:8080/api/v1/batch/oracle/reconcile-eod?date=2026-10-01" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>"
+# Query open reconciliation breaks
+curl -X GET http://localhost:8080/api/v1/reconciliation/breaks/open
+
+# Resolve break with audit notes
+curl -X POST http://localhost:8080/api/v1/reconciliation/breaks/<BREAK_ID>/resolve \
+  -H "Content-Type: application/json" \
+  -d '{"resolutionStatus":"RESOLVED","resolvedBy":"AUDITOR_101","notes":"Intermediary fee adjusted"}'
 ```
+</details>
 
----
+<details>
+<summary><b>4. Oracle 19c PL/SQL Procedures & High-Volume Batch</b></summary>
 
-## 📊 Observability & Swagger Endpoints
-- **Grafana Dashboards**: [http://localhost:3000](http://localhost:3000) (admin / admin)
-- **Prometheus Scrapes**: [http://localhost:9090](http://localhost:9090)
-- **Swagger Documentation**:
-  - API Gateway: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-  - Account Service: [http://localhost:8081/swagger-ui.html](http://localhost:8081/swagger-ui.html)
-  - Payment Service: [http://localhost:8082/swagger-ui.html](http://localhost:8082/swagger-ui.html)
-  - Exchange Rate & Global Currencies: [http://localhost:8083/swagger-ui.html](http://localhost:8083/swagger-ui.html)
-  - Reporting & Export Service: [http://localhost:8086/swagger-ui.html](http://localhost:8086/swagger-ui.html)
-  - Batch & Reconciliation Service: [http://localhost:8087/swagger-ui.html](http://localhost:8087/swagger-ui.html)
+```bash
+# Run Oracle Bulk Interest Accrual (BULK COLLECT & FORALL)
+curl -X POST "http://localhost:8080/api/v1/batch/oracle/accrue-interest?batchSize=5000"
 
+# Run Oracle End-Of-Day (EOD) Double-Entry Zero-Sum Reconciliation
+curl -X POST "http://localhost:8080/api/v1/batch/oracle/reconcile-eod?date=2026-10-01"
+```
+</details>
+
+<details>
+<summary><b>5. AWS Cloud Deployment (Terraform & Helm)</b></summary>
+
+- **Terraform IaC:** [`aws/terraform/`](file:///d:/Projects/Resume_Project/aws/terraform/) provisions VPC across 3 AZs, EKS 1.30, RDS Aurora PostgreSQL & Oracle 19c, ElastiCache Redis, MSK Kafka, and S3 KMS vault.
+- **Kubernetes Helm:** [`helm/banking-platform/`](file:///d:/Projects/Resume_Project/helm/banking-platform/) defines zero-downtime rolling deployments, Horizontal Pod Autoscalers (HPA 3 to 30 pods), Pod Disruption Budgets, and AWS ALB Ingress.
+</details>

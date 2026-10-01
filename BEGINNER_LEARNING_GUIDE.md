@@ -200,9 +200,29 @@ GET http://localhost:8080/api/v1/exchange-rates/quote?fromCurrency=USD&toCurrenc
 
 ## 🚶 Step 6: Money Transfers & The Saga Orchestrator (`payment-service`)
 
-**Business Story:** This is the heart of the banking platform. When a transfer happens, money must be safely debited from the source account and credited to the destination account across distributed microservices.
+**Business Story:** This is the heart of the banking platform. When a customer executes an account-to-account transfer, money must be safely debited from the sender's account and credited to the recipient's account across distributed microservices.
 
-### Why not standard `@Transactional`?
+### ❓ "Where is Transfer Service in the Architecture?"
+
+In enterprise core banking architecture, **all Fund Transfer functionality is housed directly inside [`payment-service`](file:///d:/Projects/Resume_Project/payment-service)**.
+
+Transfers are not separated into a disconnected standalone dummy service because a real-world fund transfer is a distributed payment workflow requiring **2-Phase Saga orchestration**, **multi-rail routing** (UPI, NEFT, IMPS, Cards, PayPal), **idempotency protection**, and **transactional outbox publishing**.
+
+Here is the exact code mapping for transfers in [`payment-service`](file:///d:/Projects/Resume_Project/payment-service):
+
+| Transfer Capability | Exact Source Code File | Role in the Transfer Flow |
+| :--- | :--- | :--- |
+| **Transfer API Endpoint** | [`PaymentController.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/controller/PaymentController.java) | Exposes `POST /api/v1/payments/transfers` (initiate transfer) and `GET /api/v1/payments/transfers/{id}` |
+| **Transfer Domain Entity** | [`Transfer.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/domain/Transfer.java) | Tracks `sagaId`, `idempotencyKey`, `sourceAccount`, `targetAccount`, `amount`, and `status` (`INITIATED`, `DEBITED`, `COMPLETED`, `FAILED`) |
+| **Saga Orchestrator** | [`TransferSagaOrchestrator.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/saga/TransferSagaOrchestrator.java) | Coordinates the 2-Phase distributed transaction. If credit fails, automatically issues compensating refund! |
+| **Transfer Rails Factory** | [`PaymentGatewayFactory.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/gateway/PaymentGatewayFactory.java) | Dynamically routes transfer to the correct rail: Internal Ledger, UPI, NEFT, IMPS, Cards, or PayPal |
+| **Database Persistence** | [`TransferRepository.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/repository/TransferRepository.java) | Stores transfers in Postgres and queries stalled transfers via `findStalledTransfers` |
+| **Auto-Recovery Scheduler** | [`PaymentSchedulerService.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/scheduler/PaymentSchedulerService.java) | Background job running every 60s to detect and auto-compensate any transfer stalled due to network drops |
+| **Guaranteed Event Outbox** | [`OutboxPublisher.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/outbox/OutboxPublisher.java) | Pushes `payment.transfer.completed` events to Kafka topic `banking.payment.transfers` for notification alerts |
+
+---
+
+### Why not standard `@Transactional` for Transfers?
 In microservices, `account-service` and `payment-service` have separate databases! If the debit succeeds but the credit fails, a standard local transaction cannot roll back the remote database.
 
 ### The Solution: 2-Phase Saga Pattern + Transactional Outbox Pattern
@@ -210,39 +230,104 @@ In microservices, `account-service` and `payment-service` have separate database
 ```mermaid
 sequenceDiagram
     autonumber
-    actor User as User / App
-    participant GW as API Gateway
-    participant PS as Payment Service
-    participant AS as Account Service
+    actor Customer as Mobile / Web Client
+    participant GW as API Gateway (:8080)
+    participant PS as Payment & Transfer Service (:8082)
+    participant FD as Fraud Detection (:8087)
+    participant AS as Account Service (:8081)
+    participant DB as Postgres (transfers table)
     participant KF as Kafka Bus
-    participant FD as Fraud Detection
-    participant NS as Notification Service
+    participant NS as Notification Service (:8088)
 
-    User->>GW: POST /api/v1/payments/transfers
-    GW->>PS: Forward with JWT & Idempotency-Key
-    PS->>FD: Real-time Velocity Check
-    FD-->>PS: APPROVE (Risk Score: 12)
-    PS->>AS: Step 1: Debit Source Account ($500)
-    AS-->>PS: 200 OK (Debited)
-    PS->>AS: Step 2: Credit Target Account ($500)
-    alt Credit Fails (e.g., Target Frozen)
-        PS->>AS: Compensating Action: Refund Source Account ($500)
-        PS->>PS: Mark Transfer Status: FAILED
-    else Credit Succeeds
-        PS->>PS: Mark Transfer Status: COMPLETED
-        PS->>KF: Publish payment.transfer.completed to Outbox
+    Customer->>GW: POST /api/v1/payments/transfers
+    Note over Customer,GW: Header: Idempotency-Key: TXN-12345
+    GW->>PS: Route request to Payment Service
+    
+    rect rgb(240, 245, 255)
+    Note over PS,FD: 1. Risk & Fraud Velocity Check
+    PS->>FD: Evaluate velocity & geo-location rules
+    FD-->>PS: APPROVE (Low Risk Score: 12)
     end
-    KF->>NS: Consume Event -> Send SMS & Email alert
+
+    rect rgb(245, 255, 245)
+    Note over PS,AS: 2. Phase 1 of Saga: Debit Sender
+    PS->>DB: Save Transfer status = INITIATED
+    PS->>AS: Debit source account ($500)
+    AS-->>PS: 200 OK (Source account debited)
+    PS->>DB: Update Transfer status = DEBITED
+    end
+
+    rect rgb(255, 250, 240)
+    Note over PS,AS: 3. Phase 2 of Saga: Credit Recipient
+    PS->>AS: Credit target account ($500)
+    alt Credit Succeeds
+        AS-->>PS: 200 OK (Target credited)
+        PS->>DB: Update Transfer status = COMPLETED
+        PS->>DB: Save outbox_events record
+    else Credit Fails (e.g. Target Frozen / Network Crash)
+        Note over PS,AS: Compensating Action (Automatic Refund)
+        PS->>AS: Refund $500 back to source account
+        PS->>DB: Mark Transfer status = COMPENSATED (FAILED)
+        PS->>DB: Save outbox_events (TRANSACTION_COMPENSATED)
+    end
+    end
+
+    rect rgb(250, 245, 255)
+    Note over PS,NS: 4. Asynchronous Outbox Event
+    PS->>KF: Publish "payment.transfer.completed" or "compensated"
+    KF->>NS: Consume event -> Send SMS & Push Alert to Customer
+    end
+
+    PS-->>Customer: Return Final Transfer Status
 ```
 
-### Key Files to Read:
-1. [`PaymentSagaOrchestrator.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/saga/PaymentSagaOrchestrator.java):
-   - Orchestrates the 2-Phase Saga.
-   - If the credit fails, it automatically issues a **compensating transaction** to refund the sender!
-2. [`PaymentGatewayFactory.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/gateway/PaymentGatewayFactory.java):
-   - **Strategy & Factory Pattern**: Dynamically selects the transfer gateway (`UpiGatewayAdapter`, `NeftGatewayAdapter`, `ImpsGatewayAdapter`, `CardGatewayAdapter`, `PayPalGatewayAdapter`).
-3. [`OutboxPublisher.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/outbox/OutboxPublisher.java):
-   - **Transactional Outbox Pattern**: Saves the Kafka event into the database table `outbox_events` in the exact same local database commit as the transfer. A background worker then pushes it to Kafka. This guarantees **zero message loss**, even if Kafka crashes during the transfer!
+---
+
+### 🛡️ Deep Dive: How Rollbacks and Refunds Work (Compensating Transactions)
+
+In distributed banking architectures, there is no physical "undo" or `ROLLBACK` for an HTTP request that already committed in another microservice's database. Instead, the system executes a **Compensating Transaction**:
+
+#### 1. Transfer State Machine Transitions:
+```
+           ┌──────────────┐
+           │  INITIATED   │
+           └──────┬───────┘
+                  │ (Source account debited successfully)
+                  ▼
+           ┌──────────────┐
+           │   DEBITED    │
+           └──────┬───────┘
+                  │
+        ┌─────────┴────────────────────────┐
+        │ (Credit Target Success)          │ (Credit Target Fails: e.g., Frozen account)
+        ▼                                  ▼
+ ┌──────────────┐                  ┌──────────────┐
+ │  COMPLETED   │                  │ COMPENSATING │
+ └──────────────┘                  └──────┬───────┘
+                                          │ (Compensating action: Re-credit source account)
+                                          ▼
+                                   ┌──────────────┐
+                                   │ COMPENSATED  │
+                                   │   (FAILED)   │
+                                   └──────────────┘
+```
+
+#### 2. Synchronous Compensation (In-Flight Failure):
+In [`TransferSagaOrchestrator.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/saga/TransferSagaOrchestrator.java#L126-L155):
+1. **Debit Succeeds:** Source account balance is reduced by `$500.00`. The transfer record transitions to `DEBITED`.
+2. **Credit Fails:** The call to credit the destination account throws an exception (e.g., target account is frozen, closed, or network times out).
+3. **Catch Block Executes:** The orchestrator marks the transfer as `COMPENSATING`.
+4. **Automatic Refund:** The orchestrator immediately calls `accountClient.credit(sourceAccount, 500.00)` to return the money to the sender.
+5. **Mark COMPENSATED:** The transfer status is updated to `COMPENSATED` and `markFailed("Credit failed, compensated: ...")`.
+6. **Outbox Notification:** A `TRANSACTION_COMPENSATED` event is written to the `outbox_events` table so Kafka can notify the user via SMS: *"Your transfer of $500 could not be delivered and has been refunded to your account."*
+
+#### 3. Asynchronous Compensation (Mid-Flight Network Crash Recovery):
+What happens if the server crashes after debiting, before compensation can run?
+- [`PaymentSchedulerService.java`](file:///d:/Projects/Resume_Project/payment-service/src/main/java/com/banking/payment/scheduler/PaymentSchedulerService.java#L41-L66) runs a background sweep every 60 seconds.
+- It queries `transferRepository.findStalledTransfers(cutoff)` for any transfer stuck in `DEBITED` or `INITIATED` status for longer than 5 minutes.
+- If a transfer was debited but never reached `COMPLETED`, the scheduler automatically initiates the refund and records the audit reason: `"GATEWAY_TIMEOUT: Auto-compensated by payment recovery scheduler"`.
+
+---
 
 ### Sample Walkthrough 5: Execute an Idempotent Fund Transfer
 ```http

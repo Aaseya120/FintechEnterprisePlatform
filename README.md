@@ -9,6 +9,8 @@
 
 A production-grade core banking platform built with **Java 21 Virtual Threads**, **Spring Boot 3.3**, and **Spring Cloud Gateway**, engineered for low-latency financial transactions, multi-rail payments, automated reconciliation, and legacy mainframe interoperability.
 
+> 💡 **New to the project or looking to understand the full flow?** Check out the [**Fresher's Step-by-Step Learning Guide**](file:///d:/Projects/Resume_Project/BEGINNER_LEARNING_GUIDE.md) covering the recommended reading order, end-to-end sample requests, and design patterns.
+
 ---
 
 ## 🏛️ System Architecture

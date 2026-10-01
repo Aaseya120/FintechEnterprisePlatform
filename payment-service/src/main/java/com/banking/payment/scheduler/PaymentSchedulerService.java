@@ -1,9 +1,12 @@
 package com.banking.payment.scheduler;
 
+import com.banking.payment.domain.StandingInstruction;
 import com.banking.payment.domain.Transfer;
 import com.banking.payment.domain.TransferStatus;
+import com.banking.payment.repository.StandingInstructionRepository;
 import com.banking.payment.repository.TransferRepository;
 import com.banking.payment.saga.TransferSagaOrchestrator;
+import com.banking.payment.service.StandingInstructionService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -11,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
@@ -26,11 +30,17 @@ public class PaymentSchedulerService {
 
     private final TransferRepository transferRepository;
     private final TransferSagaOrchestrator sagaOrchestrator;
+    private final StandingInstructionRepository instructionRepository;
+    private final StandingInstructionService instructionService;
 
     public PaymentSchedulerService(TransferRepository transferRepository,
-                                   TransferSagaOrchestrator sagaOrchestrator) {
+                                   TransferSagaOrchestrator sagaOrchestrator,
+                                   StandingInstructionRepository instructionRepository,
+                                   StandingInstructionService instructionService) {
         this.transferRepository = transferRepository;
         this.sagaOrchestrator = sagaOrchestrator;
+        this.instructionRepository = instructionRepository;
+        this.instructionService = instructionService;
     }
 
     /**
@@ -56,10 +66,10 @@ public class PaymentSchedulerService {
 
             if (t.getStatus() == TransferStatus.DEBITED) {
                 // Funds were debited from source but never credited to target: trigger Saga compensation
-                t.fail("GATEWAY_TIMEOUT: Auto-compensated by payment recovery scheduler");
+                t.markFailed("GATEWAY_TIMEOUT: Auto-compensated by payment recovery scheduler");
                 transferRepository.save(t);
             } else if (t.getStatus() == TransferStatus.INITIATED) {
-                t.fail("TRANSACTION_EXPIRED: Abandoned before debit execution");
+                t.markFailed("TRANSACTION_EXPIRED: Abandoned before debit execution");
                 transferRepository.save(t);
             }
         }
@@ -72,6 +82,20 @@ public class PaymentSchedulerService {
     @Scheduled(cron = "0 0 6 * * *")
     public void processDailyStandingInstructions() {
         log.info("Payment Scheduler: Executing 06:00 AM Standing Instructions batch run across active accounts");
-        // Scans registered standing instructions and enqueues payments through Saga Orchestrator
+        LocalDate today = LocalDate.now();
+        List<StandingInstruction> dueInstructions =
+                instructionRepository.findByStatusAndNextExecutionDateLessThanEqual(
+                        StandingInstruction.InstructionStatus.ACTIVE, today);
+
+        log.info("Payment Scheduler: Found {} active standing instructions due for execution on or before {}",
+                dueInstructions.size(), today);
+
+        for (StandingInstruction si : dueInstructions) {
+            try {
+                instructionService.executeStandingInstruction(si);
+            } catch (Exception ex) {
+                log.error("Failed to execute standing instruction {}: {}", si.getId(), ex.getMessage());
+            }
+        }
     }
 }

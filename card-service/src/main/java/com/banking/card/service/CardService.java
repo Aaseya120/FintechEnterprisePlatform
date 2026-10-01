@@ -67,6 +67,65 @@ public class CardService {
     }
 
     @Transactional
+    public CardApplicationResponseDto applyCardWithEligibility(CardApplicationRequestDto req) {
+        if (req.requestedCardType() == Card.CardType.CREDIT) {
+            int score = req.creditScore() != null ? req.creditScore() : 600;
+            java.math.BigDecimal income = req.annualIncome() != null ? req.annualIncome() : java.math.BigDecimal.ZERO;
+
+            if (score < 650) {
+                return new CardApplicationResponseDto(
+                        false,
+                        "Credit score " + score + " does not meet minimum credit requirement of 650",
+                        null,
+                        java.math.BigDecimal.ZERO,
+                        "INELIGIBLE_FOR_CREDIT"
+                );
+            }
+
+            if (income.compareTo(new java.math.BigDecimal("25000.00")) < 0) {
+                return new CardApplicationResponseDto(
+                        false,
+                        "Annual income below minimum required threshold of $25,000",
+                        null,
+                        java.math.BigDecimal.ZERO,
+                        "INSUFFICIENT_INCOME"
+                );
+            }
+
+            java.math.BigDecimal approvedLimit = score >= 750
+                    ? income.multiply(new java.math.BigDecimal("0.20")).min(new java.math.BigDecimal("50000.00"))
+                    : income.multiply(new java.math.BigDecimal("0.10")).min(new java.math.BigDecimal("15000.00"));
+
+            CardIssuanceRequestDto issueReq = new CardIssuanceRequestDto(
+                    req.customerId(),
+                    req.linkedAccountNumber(),
+                    req.cardHolderName(),
+                    req.cardNetwork(),
+                    Card.CardType.CREDIT,
+                    approvedLimit
+            );
+            CardResponseDto issued = issueCard(issueReq);
+            String tier = score >= 750 ? "PLATINUM_REWARDS" : "GOLD_REWARDS";
+            return new CardApplicationResponseDto(true, null, issued, approvedLimit, tier);
+        } else {
+            java.math.BigDecimal defaultLimit = req.requestedCardType() == Card.CardType.VIRTUAL
+                    ? new java.math.BigDecimal("1000.00")
+                    : new java.math.BigDecimal("3000.00");
+
+            CardIssuanceRequestDto issueReq = new CardIssuanceRequestDto(
+                    req.customerId(),
+                    req.linkedAccountNumber(),
+                    req.cardHolderName(),
+                    req.cardNetwork(),
+                    req.requestedCardType(),
+                    defaultLimit
+            );
+            CardResponseDto issued = issueCard(issueReq);
+            return new CardApplicationResponseDto(true, null, issued, defaultLimit, "STANDARD");
+        }
+    }
+
+    @Transactional
     public CardResponseDto updateControls(String cardId, CardControlUpdateDto update) {
         Card card = cardRepository.findById(cardId)
                 .orElseThrow(() -> new ResourceNotFoundException("Card", cardId));
@@ -74,10 +133,75 @@ public class CardService {
         if (update.dailyLimit() != null) card.setDailyLimit(update.dailyLimit());
         if (update.isInternationalEnabled() != null) card.setInternationalEnabled(update.isInternationalEnabled());
         if (update.isContactlessEnabled() != null) card.setContactlessEnabled(update.isContactlessEnabled());
+        if (update.isOnlineEnabled() != null) card.setOnlineEnabled(update.isOnlineEnabled());
+        if (update.isAtmEnabled() != null) card.setAtmEnabled(update.isAtmEnabled());
+        if (update.isPosEnabled() != null) card.setPosEnabled(update.isPosEnabled());
 
         Card saved = cardRepository.save(card);
         log.info("Updated card security controls for card ending in {}", getMasked(saved.getCardNumber()));
         return mapToDto(saved);
+    }
+
+    @Transactional
+    public CardResponseDto freezeCard(String cardId) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new ResourceNotFoundException("Card", cardId));
+
+        card.freeze();
+        Card saved = cardRepository.save(card);
+        log.warn("Card ending in {} was FROZEN by customer via mobile app", getMasked(card.getCardNumber()));
+        kafkaTemplate.send("banking.card.frozen", card.getId(), "Card temporarily frozen by user");
+        return mapToDto(saved);
+    }
+
+    @Transactional
+    public CardResponseDto unfreezeCard(String cardId) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new ResourceNotFoundException("Card", cardId));
+
+        card.unfreeze();
+        Card saved = cardRepository.save(card);
+        log.info("Card ending in {} was UNFROZEN by customer via mobile app", getMasked(card.getCardNumber()));
+        kafkaTemplate.send("banking.card.unfrozen", card.getId(), "Card un-frozen by user");
+        return mapToDto(saved);
+    }
+
+    /**
+     * Generates a 5-minute rolling Dynamic CVV (dCVV) for mobile app screen display.
+     * Prevents shoulder surfing and static CVV theft for card-not-present (CNP) transactions.
+     */
+    public DynamicCvvResponseDto generateDynamicCvv(String cardId) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new ResourceNotFoundException("Card", cardId));
+
+        long currentEpochSec = System.currentTimeMillis() / 1000L;
+        long window = currentEpochSec / 300L; // 5-minute bucket
+        long expiresAtEpochSec = (window + 1) * 300L;
+        long validForSeconds = expiresAtEpochSec - currentEpochSec;
+
+        // Deterministic hash of card secret seed + current time window
+        String seed = card.getId() + ":" + card.getCardNumber() + ":" + window;
+        int rawHash = Math.abs(seed.hashCode());
+        int cvvNum = (rawHash % 900) + 100;
+        String dynamicCvv = String.valueOf(cvvNum);
+
+        return new DynamicCvvResponseDto(
+                card.getId(),
+                dynamicCvv,
+                validForSeconds,
+                java.time.Instant.ofEpochSecond(expiresAtEpochSec)
+        );
+    }
+
+    public CardRewardDto getCardRewards(String cardId) {
+        Card card = cardRepository.findById(cardId)
+                .orElseThrow(() -> new ResourceNotFoundException("Card", cardId));
+
+        long pts = card.getRewardPoints();
+        java.math.BigDecimal cashValue = java.math.BigDecimal.valueOf(pts).multiply(new java.math.BigDecimal("0.02")); // $0.02 per point
+        String tier = pts > 50000 ? "PLATINUM_REWARDS" : pts > 10000 ? "GOLD_REWARDS" : "SILVER_REWARDS";
+
+        return new CardRewardDto(card.getId(), pts, cashValue, tier);
     }
 
     @Transactional
@@ -172,6 +296,10 @@ public class CardService {
                 c.getDailyLimit(),
                 c.isInternationalEnabled(),
                 c.isContactlessEnabled(),
+                c.isOnlineEnabled(),
+                c.isAtmEnabled(),
+                c.isPosEnabled(),
+                c.getRewardPoints(),
                 c.getCreatedAt()
         );
     }

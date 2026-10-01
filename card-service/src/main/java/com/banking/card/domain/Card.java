@@ -73,6 +73,18 @@ public class Card {
     @Column(name = "is_contactless_enabled", nullable = false)
     private boolean isContactlessEnabled;
 
+    @Column(name = "is_online_enabled", nullable = false)
+    private boolean isOnlineEnabled;
+
+    @Column(name = "is_atm_enabled", nullable = false)
+    private boolean isAtmEnabled;
+
+    @Column(name = "is_pos_enabled", nullable = false)
+    private boolean isPosEnabled;
+
+    @Column(name = "reward_points", nullable = false)
+    private long rewardPoints;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -100,7 +112,21 @@ public class Card {
         this.dailyLimit = dailyLimit;
         this.isInternationalEnabled = false;
         this.isContactlessEnabled = true;
+        this.isOnlineEnabled = true;
+        this.isAtmEnabled = true;
+        this.isPosEnabled = true;
+        this.rewardPoints = 0;
         this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+    }
+
+    public void freeze() {
+        this.status = CardStatus.FROZEN;
+        this.updatedAt = Instant.now();
+    }
+
+    public void unfreeze() {
+        this.status = CardStatus.ACTIVE;
         this.updatedAt = Instant.now();
     }
 }

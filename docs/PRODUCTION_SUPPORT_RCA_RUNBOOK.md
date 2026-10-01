@@ -61,7 +61,7 @@ kubectl exec -it <pod-name> -n production -- jcmd 1 Thread.dump_to_file -format=
 
 ### 3.4 RCA Findings
 - **Root Cause (Virtual Thread Pinning)**:
-  - While Java 21 Virtual Threads (`threads.virtual.enabled=true`) allow millions of concurrent tasks, several legacy security filters were executing `synchronized (lock)` blocks during blocking I/O calls to LDAP/Keycloak.
+  - While Java 21 Virtual Threads (`threads.virtual.enabled=true`) allow millions of concurrent tasks, several legacy security filters were executing `synchronized (lock)` blocks during blocking I/O calls to external identity providers.
   - This caused Virtual Threads to **pin their underlying carrier platform thread (ForkJoinPool worker)**, exhausting the platform thread pool and preventing new virtual threads from executing.
 - **Remediation**:
   - Replaced legacy `synchronized` blocks with `java.util.concurrent.locks.ReentrantLock`.

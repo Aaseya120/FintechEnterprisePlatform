@@ -6,12 +6,10 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.server.ServerWebExchange;
 import reactor.core.publisher.Mono;
 
 import java.net.InetSocketAddress;
-import java.util.Optional;
 
 @Configuration
 public class RateLimiterConfig {
@@ -26,12 +24,7 @@ public class RateLimiterConfig {
     public KeyResolver userOrIpKeyResolver() {
         return exchange -> exchange.getPrincipal()
                 .cast(Authentication.class)
-                .map(auth -> {
-                    if (auth.getPrincipal() instanceof Jwt jwt) {
-                        return "usr:" + jwt.getSubject();
-                    }
-                    return "usr:" + auth.getName();
-                })
+                .map(auth -> "usr:" + auth.getName())
                 .switchIfEmpty(Mono.fromSupplier(() -> {
                     InetSocketAddress remoteAddress = exchange.getRequest().getRemoteAddress();
                     if (remoteAddress != null && remoteAddress.getAddress() != null) {

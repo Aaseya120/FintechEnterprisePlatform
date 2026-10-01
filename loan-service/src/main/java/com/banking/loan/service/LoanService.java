@@ -3,8 +3,10 @@ package com.banking.loan.service;
 import com.banking.common.exception.BankingException;
 import com.banking.common.exception.ResourceNotFoundException;
 import com.banking.loan.domain.Loan;
+import com.banking.loan.domain.LoanRepayment;
 import com.banking.loan.domain.LoanRepaymentSchedule;
 import com.banking.loan.dto.LoanDtos.*;
+import com.banking.loan.repository.LoanRepaymentRepository;
 import com.banking.loan.repository.LoanRepaymentScheduleRepository;
 import com.banking.loan.repository.LoanRepository;
 import org.slf4j.Logger;
@@ -31,13 +33,16 @@ public class LoanService {
 
     private final LoanRepository loanRepository;
     private final LoanRepaymentScheduleRepository scheduleRepository;
+    private final LoanRepaymentRepository repaymentRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public LoanService(LoanRepository loanRepository,
                        LoanRepaymentScheduleRepository scheduleRepository,
+                       LoanRepaymentRepository repaymentRepository,
                        KafkaTemplate<String, Object> kafkaTemplate) {
         this.loanRepository = loanRepository;
         this.scheduleRepository = scheduleRepository;
+        this.repaymentRepository = repaymentRepository;
         this.kafkaTemplate = kafkaTemplate;
     }
 
@@ -165,6 +170,157 @@ public class LoanService {
             dueDate = dueDate.plusMonths(1);
         }
         scheduleRepository.saveAll(schedules);
+    }
+
+    @Transactional
+    public LoanRepaymentResponseDto payInstallment(String loanId, LoanRepaymentRequestDto req) {
+        Loan loan = loanRepository.findById(loanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Loan", loanId));
+
+        if (loan.getStatus() != Loan.LoanStatus.DISBURSED) {
+            throw new BankingException("LOAN_NOT_ACTIVE", "Can only make repayments on active disbursed loans", HttpStatus.BAD_REQUEST);
+        }
+
+        List<LoanRepaymentSchedule> schedules = scheduleRepository.findByLoanIdOrderByInstallmentNumberAsc(loanId);
+        LoanRepaymentSchedule nextPending = schedules.stream()
+                .filter(s -> s.getStatus() == LoanRepaymentSchedule.ScheduleStatus.PENDING)
+                .findFirst()
+                .orElseThrow(() -> new BankingException("NO_PENDING_SCHEDULE", "No pending installments found for this loan", HttpStatus.BAD_REQUEST));
+
+        nextPending.setStatus(LoanRepaymentSchedule.ScheduleStatus.PAID);
+        scheduleRepository.save(nextPending);
+
+        String ref = req.transactionReference() != null ? req.transactionReference() : "REPAY_" + UUID.randomUUID().toString().substring(0, 10);
+        LoanRepayment repayment = new LoanRepayment(
+                UUID.randomUUID().toString(),
+                loanId,
+                loan.getCustomerId(),
+                req.amount(),
+                LoanRepayment.PaymentType.EMI_INSTALLMENT,
+                req.paymentMethod(),
+                ref
+        );
+        LoanRepayment saved = repaymentRepository.save(repayment);
+
+        // Check if all installments are now paid
+        boolean anyRemaining = schedules.stream().anyMatch(s -> s.getStatus() == LoanRepaymentSchedule.ScheduleStatus.PENDING);
+        if (!anyRemaining) {
+            loan.setStatus(Loan.LoanStatus.CLOSED);
+            loanRepository.save(loan);
+            log.info("Loan {} has been FULLY PAID OFF and CLOSED", loan.getLoanAccountNumber());
+        }
+
+        log.info("Recorded EMI installment {} payment of {} for loan {}", nextPending.getInstallmentNumber(), req.amount(), loan.getLoanAccountNumber());
+        return new LoanRepaymentResponseDto(
+                saved.getId(),
+                saved.getLoanId(),
+                saved.getCustomerId(),
+                saved.getAmountPaid(),
+                saved.getPaymentType(),
+                saved.getPaymentMethod(),
+                saved.getTransactionReference(),
+                nextPending.getRemainingBalance(),
+                saved.getPaidAt()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public LoanForeclosureQuoteDto getForeclosureQuote(String loanId) {
+        Loan loan = loanRepository.findById(loanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Loan", loanId));
+
+        if (loan.getStatus() != Loan.LoanStatus.DISBURSED) {
+            throw new BankingException("LOAN_NOT_ACTIVE", "Loan is not active", HttpStatus.BAD_REQUEST);
+        }
+
+        List<LoanRepaymentSchedule> schedules = scheduleRepository.findByLoanIdOrderByInstallmentNumberAsc(loanId);
+        BigDecimal outstandingPrincipal = schedules.stream()
+                .filter(s -> s.getStatus() == LoanRepaymentSchedule.ScheduleStatus.PENDING)
+                .map(LoanRepaymentSchedule::getPrincipalComponent)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        BigDecimal foreclosurePenaltyRate = new BigDecimal("0.02"); // 2% foreclosure penalty
+        BigDecimal foreclosurePenalty = outstandingPrincipal.multiply(foreclosurePenaltyRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal accruedInterest = outstandingPrincipal.multiply(loan.getAnnualInterestRate())
+                .divide(BigDecimal.valueOf(1200), 2, RoundingMode.HALF_UP);
+        BigDecimal totalPayoff = outstandingPrincipal.add(foreclosurePenalty).add(accruedInterest);
+
+        return new LoanForeclosureQuoteDto(
+                loan.getId(),
+                loan.getLoanAccountNumber(),
+                outstandingPrincipal,
+                accruedInterest,
+                foreclosurePenalty,
+                totalPayoff,
+                LocalDate.now().plusDays(7)
+        );
+    }
+
+    @Transactional
+    public LoanRepaymentResponseDto forecloseLoan(String loanId, LoanRepaymentRequestDto req) {
+        Loan loan = loanRepository.findById(loanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Loan", loanId));
+
+        LoanForeclosureQuoteDto quote = getForeclosureQuote(loanId);
+        if (req.amount().compareTo(quote.totalPayoffAmount()) < 0) {
+            throw new BankingException("INSUFFICIENT_PAYOFF_AMOUNT",
+                    "Foreclosure payoff requires exact or greater amount of " + quote.totalPayoffAmount(), HttpStatus.BAD_REQUEST);
+        }
+
+        // Mark all remaining installments as PAID
+        List<LoanRepaymentSchedule> schedules = scheduleRepository.findByLoanIdOrderByInstallmentNumberAsc(loanId);
+        for (LoanRepaymentSchedule s : schedules) {
+            if (s.getStatus() == LoanRepaymentSchedule.ScheduleStatus.PENDING) {
+                s.setStatus(LoanRepaymentSchedule.ScheduleStatus.PAID);
+            }
+        }
+        scheduleRepository.saveAll(schedules);
+
+        loan.setStatus(Loan.LoanStatus.CLOSED);
+        loanRepository.save(loan);
+
+        String ref = req.transactionReference() != null ? req.transactionReference() : "FORECLOSE_" + UUID.randomUUID().toString().substring(0, 10);
+        LoanRepayment repayment = new LoanRepayment(
+                UUID.randomUUID().toString(),
+                loanId,
+                loan.getCustomerId(),
+                req.amount(),
+                LoanRepayment.PaymentType.FORECLOSURE_PAYOFF,
+                req.paymentMethod(),
+                ref
+        );
+        LoanRepayment saved = repaymentRepository.save(repayment);
+        log.info("Loan {} successfully FORECLOSED and CLOSED with payoff of {}", loan.getLoanAccountNumber(), req.amount());
+
+        return new LoanRepaymentResponseDto(
+                saved.getId(),
+                saved.getLoanId(),
+                saved.getCustomerId(),
+                saved.getAmountPaid(),
+                saved.getPaymentType(),
+                saved.getPaymentMethod(),
+                saved.getTransactionReference(),
+                BigDecimal.ZERO,
+                saved.getPaidAt()
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<LoanRepaymentResponseDto> getRepayments(String loanId) {
+        return repaymentRepository.findByLoanIdOrderByPaidAtDesc(loanId)
+                .stream()
+                .map(r -> new LoanRepaymentResponseDto(
+                        r.getId(),
+                        r.getLoanId(),
+                        r.getCustomerId(),
+                        r.getAmountPaid(),
+                        r.getPaymentType(),
+                        r.getPaymentMethod(),
+                        r.getTransactionReference(),
+                        BigDecimal.ZERO,
+                        r.getPaidAt()
+                ))
+                .toList();
     }
 
     private BigDecimal computeMonthlyEmi(BigDecimal principal, BigDecimal annualRate, int months) {

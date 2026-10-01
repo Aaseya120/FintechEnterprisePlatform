@@ -39,6 +39,38 @@ public class CustomerKyc {
     private String documentUrl;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "address_proof_type", length = 30)
+    private AddressProofType addressProofType;
+
+    @Column(name = "address_proof_url", length = 255)
+    private String addressProofUrl;
+
+    @Column(name = "selfie_url", length = 255)
+    private String selfieUrl;
+
+    @Column(name = "liveness_score")
+    private Double livenessScore;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "liveness_status", length = 20)
+    private LivenessStatus livenessStatus;
+
+    @Column(name = "video_kyc_url", length = 255)
+    private String videoKycUrl;
+
+    @Column(name = "audio_sample_url", length = 255)
+    private String audioSampleUrl;
+
+    @Column(name = "geo_latitude")
+    private Double geoLatitude;
+
+    @Column(name = "geo_longitude")
+    private Double geoLongitude;
+
+    @Column(name = "ocr_extracted_data", length = 1000)
+    private String ocrExtractedData;
+
+    @Enumerated(EnumType.STRING)
     @Column(name = "verification_status", length = 20, nullable = false)
     private KycStatus verificationStatus;
 
@@ -54,7 +86,9 @@ public class CustomerKyc {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    public enum IdType { PASSPORT, NATIONAL_ID, DRIVERS_LICENSE, PAN, SSN }
+    public enum IdType { PASSPORT, NATIONAL_ID, DRIVERS_LICENSE, PAN, SSN, AADHAAR }
+    public enum AddressProofType { UTILITY_BILL, BANK_STATEMENT, RENTAL_AGREEMENT, VOTER_ID, MUNICIPAL_TAX_RECEIPT }
+    public enum LivenessStatus { PASSED, FAILED, PENDING }
     public enum KycStatus { SUBMITTED, UNDER_REVIEW, APPROVED, REJECTED }
 
     public CustomerKyc(String id, String customerId, IdType idType, String idNumber, String documentUrl) {

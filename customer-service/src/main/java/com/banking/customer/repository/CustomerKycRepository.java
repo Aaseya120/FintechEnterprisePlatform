@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface CustomerKycRepository extends JpaRepository<CustomerKyc, String> {
     List<CustomerKyc> findByCustomerId(String customerId);
     Optional<CustomerKyc> findByCustomerIdAndVerificationStatus(String customerId, CustomerKyc.KycStatus status);
+    Optional<CustomerKyc> findTopByCustomerIdOrderByCreatedAtDesc(String customerId);
 }

@@ -12,7 +12,7 @@
 
     <artifactId>api-gateway</artifactId>
     <name>API Gateway</name>
-    <description>Edge Service with Spring Cloud Gateway, Keycloak JWT RBAC &amp; Redis Rate Limiting</description>
+    <description>Edge Service with Spring Cloud Gateway, JWT Authentication &amp; Redis Rate Limiting</description>
 
     <dependencies>
         <!-- Spring Cloud Gateway Reactive -->
@@ -27,11 +27,7 @@
             <artifactId>spring-boot-starter-data-redis-reactive</artifactId>
         </dependency>
 
-        <!-- Security & OAuth2 Keycloak Resource Server -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
-        </dependency>
+        <!-- Security & JWT Authentication -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>

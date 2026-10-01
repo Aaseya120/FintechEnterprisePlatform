@@ -62,4 +62,32 @@ public class LoanDtos {
             BigDecimal remainingBalance,
             String status
     ) implements Serializable {}
+
+    public record LoanRepaymentRequestDto(
+            @NotNull @DecimalMin("1.00") BigDecimal amount,
+            @NotBlank String paymentMethod,
+            String transactionReference
+    ) implements Serializable {}
+
+    public record LoanRepaymentResponseDto(
+            String id,
+            String loanId,
+            String customerId,
+            BigDecimal amountPaid,
+            com.banking.loan.domain.LoanRepayment.PaymentType paymentType,
+            String paymentMethod,
+            String transactionReference,
+            BigDecimal remainingLoanBalance,
+            Instant paidAt
+    ) implements Serializable {}
+
+    public record LoanForeclosureQuoteDto(
+            String loanId,
+            String loanAccountNumber,
+            BigDecimal outstandingPrincipal,
+            BigDecimal accruedInterest,
+            BigDecimal foreclosurePenalty,
+            BigDecimal totalPayoffAmount,
+            LocalDate validUntil
+    ) implements Serializable {}
 }

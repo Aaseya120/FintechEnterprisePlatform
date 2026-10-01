@@ -10,12 +10,8 @@ spring:
       port: ${REDIS_PORT:6379}
       timeout: 2000ms
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/banking-realm}
-          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/banking-realm/protocol/openid-connect/certs}
+  # JWT Security Configuration (custom HMAC-SHA256 tokens, no external IdP)
+  # Token validation handled by JwtGatewayAuthFilter
 
   cloud:
     gateway:

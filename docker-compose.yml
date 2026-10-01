@@ -54,16 +54,6 @@ services:
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
 
-  # Keycloak IAM & OAuth2 Authorization Server
-  banking-keycloak:
-    image: quay.io/keycloak/keycloak:24.0.5
-    container_name: banking-keycloak
-    command: start-dev --import-realm
-    environment:
-      KEYCLOAK_ADMIN: admin
-      KEYCLOAK_ADMIN_PASSWORD: adminpassword
-    ports:
-      - "8180:8080"
 
   # Prometheus Observability
   banking-prometheus:
@@ -108,8 +98,6 @@ services:
       NOTIFICATION_SERVICE_URL: http://notification-service:8088
       REPORTING_SERVICE_URL: http://reporting-service:8089
       BATCH_SERVICE_URL: http://batch-service:8090
-      KEYCLOAK_JWK_SET_URI: http://banking-keycloak:8080/realms/banking-realm/protocol/openid-connect/certs
-      KEYCLOAK_ISSUER_URI: http://banking-keycloak:8080/realms/banking-realm
     depends_on:
       banking-redis:
         condition: service_healthy
@@ -127,8 +115,6 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: postgrespassword
       REDIS_HOST: banking-redis
-      KEYCLOAK_JWK_SET_URI: http://banking-keycloak:8080/realms/banking-realm/protocol/openid-connect/certs
-      KEYCLOAK_ISSUER_URI: http://banking-keycloak:8080/realms/banking-realm
     depends_on:
       banking-db:
         condition: service_healthy
@@ -150,8 +136,6 @@ services:
       REDIS_HOST: banking-redis
       KAFKA_BOOTSTRAP_SERVERS: banking-kafka:29092
       ACCOUNT_SERVICE_URL: http://account-service:8081
-      KEYCLOAK_JWK_SET_URI: http://banking-keycloak:8080/realms/banking-realm/protocol/openid-connect/certs
-      KEYCLOAK_ISSUER_URI: http://banking-keycloak:8080/realms/banking-realm
     depends_on:
       banking-db:
         condition: service_healthy

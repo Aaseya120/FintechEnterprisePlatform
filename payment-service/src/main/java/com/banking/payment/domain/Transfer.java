@@ -88,4 +88,8 @@ public class Transfer {
         this.failureReason = reason;
         this.updatedAt = Instant.now();
     }
+
+    public void fail(String reason) {
+        markFailed(reason);
+    }
 }

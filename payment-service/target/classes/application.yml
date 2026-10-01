@@ -1,5 +1,9 @@
 server:
   port: 8082
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/plain
+    min-response-size: 1024
 
 spring:
   application:
@@ -48,12 +52,6 @@ spring:
       properties:
         spring.json.trusted.packages: "com.banking.*"
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/banking-realm}
-          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/banking-realm/protocol/openid-connect/certs}
 
 account:
   service:

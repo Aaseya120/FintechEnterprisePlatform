@@ -58,6 +58,10 @@ public class Customer {
     @Column(name = "status", length = 20, nullable = false)
     private CustomerStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "customer_tier", length = 20, nullable = false)
+    private CustomerTier customerTier;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -66,6 +70,29 @@ public class Customer {
 
     public enum RiskCategory { LOW, MEDIUM, HIGH }
     public enum CustomerStatus { ONBOARDING, ACTIVE, SUSPENDED, TERMINATED }
+    public enum CustomerTier {
+        BASIC("Standard Banking", 5000.0, 3, false),
+        PREMIUM("Priority Banking", 25000.0, 5, true),
+        PLATINUM("Wealth & Concierge", 100000.0, 10, true),
+        HNI("High Net-Worth Private Banking", 1000000.0, -1, true);
+
+        private final String displayName;
+        private final double dailyTransferLimit;
+        private final int maxCards;
+        private final boolean internationalAccess;
+
+        CustomerTier(String displayName, double dailyTransferLimit, int maxCards, boolean internationalAccess) {
+            this.displayName = displayName;
+            this.dailyTransferLimit = dailyTransferLimit;
+            this.maxCards = maxCards;
+            this.internationalAccess = internationalAccess;
+        }
+
+        public String getDisplayName() { return displayName; }
+        public double getDailyTransferLimit() { return dailyTransferLimit; }
+        public int getMaxCards() { return maxCards; }
+        public boolean isInternationalAccess() { return internationalAccess; }
+    }
 
     public Customer(String id, String customerNumber, String firstName, String lastName,
                     String email, String phone, LocalDate dateOfBirth, String address) {
@@ -79,7 +106,13 @@ public class Customer {
         this.address = address;
         this.riskCategory = RiskCategory.LOW;
         this.status = CustomerStatus.ONBOARDING;
+        this.customerTier = CustomerTier.BASIC;
         this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
+    }
+
+    public void upgradeTier(CustomerTier newTier) {
+        this.customerTier = newTier;
         this.updatedAt = Instant.now();
     }
 

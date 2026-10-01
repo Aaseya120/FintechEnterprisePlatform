@@ -2,6 +2,7 @@ package com.banking.common.config;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.context.annotation.Bean;
@@ -22,8 +23,8 @@ public class RedisCommonConfig {
 
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        com.fasterxml.jackson.databind.jsontype.PolymorphicTypeValidator ptv =
-                com.fasterxml.jackson.databind.jsontype.BasicPolymorphicTypeValidator.builder()
+        BasicPolymorphicTypeValidator ptv =
+                BasicPolymorphicTypeValidator.builder()
                         .allowIfBaseType(Object.class)
                         .build();
         objectMapper.activateDefaultTyping(

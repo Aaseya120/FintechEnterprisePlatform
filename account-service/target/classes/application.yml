@@ -1,5 +1,9 @@
 server:
   port: 8081
+  compression:
+    enabled: true
+    mime-types: application/json,application/xml,text/html,text/plain
+    min-response-size: 1024
 
 spring:
   application:
@@ -54,12 +58,6 @@ spring:
       enabled: true
       path: /graphiql
 
-  security:
-    oauth2:
-      resourceserver:
-        jwt:
-          issuer-uri: ${KEYCLOAK_ISSUER_URI:http://localhost:8080/realms/banking-realm}
-          jwk-set-uri: ${KEYCLOAK_JWK_SET_URI:http://localhost:8180/realms/banking-realm/protocol/openid-connect/certs}
 
 # Resilience4j Circuit Breaker & Retry Policies
 resilience4j:
@@ -72,6 +70,16 @@ resilience4j:
         automatic-transition-from-open-to-half-open-enabled: true
         wait-duration-in-open-state: 5000ms
         failure-rate-threshold: 50
+      legacyCbs:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 60.0
+        slow-call-rate-threshold: 80.0
+        slow-call-duration-threshold: 5000ms
+        wait-duration-in-open-state: 15000ms
+        permitted-number-of-calls-in-half-open-state: 2
+        automatic-transition-from-open-to-half-open-enabled: true
   retry:
     instances:
       accountDatabase:
@@ -79,6 +87,14 @@ resilience4j:
         wait-duration: 200ms
         enable-exponential-backoff: true
         exponential-backoff-multiplier: 2
+      legacyCbs:
+        max-attempts: 2
+        wait-duration: 1000ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - org.springframework.web.client.ResourceAccessException
+          - java.io.IOException
 
 # OpenAPI / Swagger 3 Configuration
 springdoc:

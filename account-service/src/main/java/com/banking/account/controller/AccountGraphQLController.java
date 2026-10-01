@@ -3,15 +3,19 @@ package com.banking.account.controller;
 import com.banking.account.domain.AccountType;
 import com.banking.account.dto.AccountResponseDto;
 import com.banking.account.dto.CreateAccountRequest;
+import com.banking.account.dto.SavingVaultDtos.CreateSavingVaultRequestDto;
+import com.banking.account.dto.SavingVaultDtos.SavingVaultResponseDto;
 import com.banking.account.middleware.LegacyCbsDtos.*;
 import com.banking.account.middleware.LegacyCbsMiddlewareGateway;
 import com.banking.account.service.AccountService;
+import com.banking.account.service.SavingVaultService;
 import org.springframework.graphql.data.method.annotation.Argument;
 import org.springframework.graphql.data.method.annotation.MutationMapping;
 import org.springframework.graphql.data.method.annotation.QueryMapping;
 import org.springframework.stereotype.Controller;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -21,11 +25,14 @@ public class AccountGraphQLController {
 
     private final AccountService accountService;
     private final LegacyCbsMiddlewareGateway cbsGateway;
+    private final SavingVaultService vaultService;
 
     public AccountGraphQLController(AccountService accountService,
-                                  LegacyCbsMiddlewareGateway cbsGateway) {
+                                  LegacyCbsMiddlewareGateway cbsGateway,
+                                  SavingVaultService vaultService) {
         this.accountService = accountService;
         this.cbsGateway = cbsGateway;
+        this.vaultService = vaultService;
     }
 
     @QueryMapping
@@ -52,6 +59,16 @@ public class AccountGraphQLController {
     @QueryMapping
     public CbsHealthCheckResponse legacyCbsHealth() {
         return cbsGateway.checkConnectivity();
+    }
+
+    @QueryMapping
+    public List<SavingVaultResponseDto> savingVaultsByCustomer(@Argument String customerId) {
+        return vaultService.getVaultsByCustomer(customerId);
+    }
+
+    @QueryMapping
+    public SavingVaultResponseDto savingVaultById(@Argument String vaultId) {
+        return vaultService.getVaultById(vaultId);
     }
 
     @MutationMapping
@@ -99,7 +116,37 @@ public class AccountGraphQLController {
         return cbsGateway.postTransaction(request);
     }
 
+    @MutationMapping
+    public SavingVaultResponseDto createSavingVault(@Argument CreateSavingVaultInput input) {
+        LocalDate targetDate = input.targetDate() != null && !input.targetDate().isBlank()
+                ? LocalDate.parse(input.targetDate()) : null;
+
+        CreateSavingVaultRequestDto req =
+                new CreateSavingVaultRequestDto(
+                        input.customerId(),
+                        input.parentAccountNumber(),
+                        input.vaultName(),
+                        BigDecimal.valueOf(input.targetAmount()),
+                        input.currency(),
+                        targetDate,
+                        input.autoRoundupEnabled()
+                );
+        return vaultService.createVault(req);
+    }
+
+    @MutationMapping
+    public SavingVaultResponseDto depositToVault(@Argument String vaultId, @Argument Float amount) {
+        return vaultService.depositToVault(vaultId, BigDecimal.valueOf(amount));
+    }
+
+    @MutationMapping
+    public SavingVaultResponseDto withdrawFromVault(@Argument String vaultId, @Argument Float amount) {
+        return vaultService.withdrawFromVault(vaultId, BigDecimal.valueOf(amount));
+    }
+
     public record OpenAccountInput(String customerId, AccountType accountType, String currency, Double initialDeposit) {}
+
+    public record CreateSavingVaultInput(String customerId, String parentAccountNumber, String vaultName, Double targetAmount, String currency, String targetDate, Boolean autoRoundupEnabled) {}
 
     public record LegacyCbsPostInput(String transactionRef, String sourceAccount, String targetAccount, Double amount, String currency, String narration) {}
 }

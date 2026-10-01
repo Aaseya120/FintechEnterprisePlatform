@@ -40,13 +40,20 @@
         <springdoc.version>2.6.0</springdoc.version>
         <testcontainers.version>1.20.1</testcontainers.version>
         <mapstruct.version>1.5.5.Final</mapstruct.version>
-        <lombok.version>1.18.34</lombok.version>
+        <lombok.version>1.18.38</lombok.version>
         <micrometer.version>1.13.4</micrometer.version>
         <opentelemetry.version>1.38.0</opentelemetry.version>
     </properties>
 
     <dependencyManagement>
         <dependencies>
+            <!-- Override Lombok for JDK 22+ TypeTag compatibility -->
+            <dependency>
+                <groupId>org.projectlombok</groupId>
+                <artifactId>lombok</artifactId>
+                <version>${lombok.version}</version>
+            </dependency>
+
             <!-- Spring Boot Dependencies -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>

@@ -17,7 +17,7 @@ A production-grade core banking platform built with **Java 21 Virtual Threads**,
 
 ```mermaid
 graph TD
-    Client["Digital Channels (iOS / Android / Web)"] -->|HTTPS / WSS| APIGW["API Gateway (:8080)<br/>Keycloak JWT • Redis Token Bucket Rate Limiting"]
+    Client["Digital Channels (iOS / Android / Web)"] -->|HTTPS / WSS| APIGW["API Gateway (:8080)<br/>JWT Auth • Redis Token Bucket Rate Limiting"]
     
     APIGW -->|REST / GraphQL| Acc["Account Service (:8081)<br/>GraphQL • SOAP • CBS SOA Bridge"]
     APIGW -->|REST| Pay["Payment Service (:8082)<br/>Saga Orchestrator • Outbox • Multi-Gateways"]
@@ -47,7 +47,7 @@ graph TD
 
 | Service | Port | Primary Responsibilities | Key Tech Stack |
 | :--- | :---: | :--- | :--- |
-| [**api-gateway**](file:///d:/Projects/Resume_Project/api-gateway) | `8080` | Keycloak JWT Auth, RBAC, Redis Token-Bucket rate limiting | Spring Cloud Gateway, WebFlux, Redis |
+| [**api-gateway**](file:///d:/Projects/Resume_Project/api-gateway) | `8080` | JWT Authentication, RBAC, Redis Token-Bucket rate limiting | Spring Cloud Gateway, WebFlux, Redis |
 | [**account-service**](file:///d:/Projects/Resume_Project/account-service) | `8081` | Ledger balance, GraphQL API, CBS SOA Middleware Bridge | Spring Data JPA, GraphQL, Spring-WS SOAP |
 | [**payment-service**](file:///d:/Projects/Resume_Project/payment-service) | `8082` | Distributed fund transfers, 2-phase Saga, Multi-rail gateways | Kafka, Outbox Pattern, Strategy Pattern |
 | [**exchange-rate-service**](file:///d:/Projects/Resume_Project/exchange-rate-service) | `8083` | Global currencies, dynamic interbank FX ticker, quotes | Redis Cache, Scheduled Brownian motion |
@@ -66,7 +66,7 @@ graph TD
 
 ### 1. Launch Infrastructure
 ```bash
-docker compose up -d banking-db banking-redis banking-kafka banking-keycloak banking-prometheus banking-grafana
+docker compose up -d banking-db banking-redis banking-kafka banking-prometheus banking-grafana
 ```
 
 ### 2. Build Solution
@@ -124,11 +124,11 @@ mvn spring-boot:run -pl exchange-rate-service
 ```bash
 # Export PDF Statement with bank headers & styling
 curl -X GET "http://localhost:8080/api/v1/reports/transactions/export?accountNumber=US1000000001&format=PDF" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>" -o statement.pdf
+  -H "Authorization: Bearer <JWT_ACCESS_TOKEN>" -o statement.pdf
 
 # Export Excel .xlsx Statement with formulas
 curl -X GET "http://localhost:8080/api/v1/reports/transactions/export?accountNumber=US1000000001&format=EXCEL" \
-  -H "Authorization: Bearer <KEYCLOAK_JWT>" -o statement.xlsx
+  -H "Authorization: Bearer <JWT_ACCESS_TOKEN>" -o statement.xlsx
 ```
 </details>
 

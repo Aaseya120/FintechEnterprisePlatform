@@ -4,6 +4,8 @@ type Query {
     accountBalance(accountNumber: String!): BalanceInfo
     legacyCbsAccount(accountNumber: String!): LegacyCbsAccountInquiry
     legacyCbsHealth: LegacyCbsHealthStatus
+    savingVaultsByCustomer(customerId: String!): [SavingVault]
+    savingVaultById(vaultId: String!): SavingVault
 }
 
 type Mutation {
@@ -11,6 +13,9 @@ type Mutation {
     debitAccount(accountNumber: String!, amount: Float!): Account
     creditAccount(accountNumber: String!, amount: Float!): Account
     postLegacyCbsTransaction(input: LegacyCbsPostInput!): LegacyCbsPostResult
+    createSavingVault(input: CreateSavingVaultInput!): SavingVault
+    depositToVault(vaultId: String!, amount: Float!): SavingVault
+    withdrawFromVault(vaultId: String!, amount: Float!): SavingVault
 }
 
 input OpenAccountInput {
@@ -18,6 +23,16 @@ input OpenAccountInput {
     accountType: AccountType!
     currency: String!
     initialDeposit: Float!
+}
+
+input CreateSavingVaultInput {
+    customerId: String!
+    parentAccountNumber: String!
+    vaultName: String!
+    targetAmount: Float!
+    currency: String!
+    targetDate: String
+    autoRoundupEnabled: Boolean
 }
 
 input LegacyCbsPostInput {
@@ -43,6 +58,11 @@ enum AccountStatus {
     CLOSED
 }
 
+enum LockStatus {
+    LOCKED
+    UNLOCKED
+}
+
 type Account {
     id: ID!
     accountNumber: String!
@@ -59,6 +79,22 @@ type Account {
 type BalanceInfo {
     accountNumber: String!
     availableBalance: Float!
+}
+
+type SavingVault {
+    id: ID!
+    customerId: String!
+    parentAccountNumber: String!
+    vaultName: String!
+    targetAmount: Float!
+    currentBalance: Float!
+    currency: String!
+    targetDate: String
+    lockStatus: LockStatus!
+    autoRoundupEnabled: Boolean!
+    progressPercentage: Float!
+    createdAt: String
+    updatedAt: String
 }
 
 type LegacyCbsAccountInquiry {

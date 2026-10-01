@@ -63,7 +63,7 @@ public record TransferRequestDto(
 
 | Security Domain | Mandatory Standard |
 | :--- | :--- |
-| **Authentication** | Bearer JWT signed via Keycloak RSA-256 with JWKS rotation |
+| **Authentication** | Bearer JWT signed via HMAC-SHA256 with refresh token rotation |
 | **Authorization** | Strict RBAC (`@PreAuthorize("hasRole('ROLE_CUSTOMER')")`) |
 | **SQL Injection** | Exclusively JPA parameter binding (`:param`), Hibernate Criteria, or Flyway migrations. Native string concatenation is blocked. |
 | **Secret Management** | Zero plaintext credentials in Git. Injected via AWS Secrets Manager or Kubernetes Secrets. |

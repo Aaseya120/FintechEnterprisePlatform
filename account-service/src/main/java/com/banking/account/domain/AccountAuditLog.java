@@ -43,6 +43,9 @@ public class AccountAuditLog {
     @Column(name = "ip_address", length = 45)
     private String ipAddress;
 
+    @Column(name = "service_id", length = 20)
+    private String serviceId = "SRV-ACC-002";
+
     @Column(name = "correlation_id", length = 64)
     private String correlationId;
 

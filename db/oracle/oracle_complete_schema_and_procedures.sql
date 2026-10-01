@@ -9,7 +9,9 @@ BEGIN
     FOR cur_rec IN (SELECT object_name, object_type 
                     FROM user_objects 
                     WHERE object_type IN ('TABLE', 'PACKAGE', 'SEQUENCE')
-                      AND object_name IN ('ACCOUNTS', 'ACCOUNT_AUDIT_LOG', 'TRANSFERS', 'OUTBOX_EVENTS', 
+                      AND object_name IN ('CUSTOMERS', 'CUSTOMER_KYC', 'CUSTOMER_CREDENTIALS', 'BENEFICIARIES', 'CUSTOMER_ACTION_AUDITS', 'ACCOUNTS', 'ACCOUNT_AUDIT_LOG', 'TRANSFERS', 'OUTBOX_EVENTS', 
+                                          'TERM_DEPOSITS', 'SAVING_VAULTS', 'STANDING_INSTRUCTIONS', 'CARDS', 'MOBILE_DEVICE_REGISTRATIONS',
+                                          'LOANS', 'LOAN_REPAYMENT_SCHEDULE', 'LOAN_REPAYMENTS',
                                           'STG_CLEARING_TRANSACTIONS', 'RECON_RUNS', 'RECON_BREAKS',
                                           'EXCHANGE_RATES', 'FX_RATE_HISTORY', 'REPORT_AUDIT_LOGS', 'PKG_BANKING_CORE',
                                           'PKG_FOREX_SETTLEMENT', 'PKG_RECONCILIATION_ENGINE')) 
@@ -32,6 +34,116 @@ END;
 -- ====================================================================================
 -- 2. TABLE DEFINITIONS (ORACLE 19c OPTIMIZED)
 -- ====================================================================================
+
+-- Digital Customer Onboarding
+CREATE TABLE customers (
+    id VARCHAR2(36) NOT NULL,
+    customer_number VARCHAR2(32) NOT NULL,
+    first_name VARCHAR2(100) NOT NULL,
+    last_name VARCHAR2(100) NOT NULL,
+    email VARCHAR2(150) NOT NULL,
+    phone VARCHAR2(30) NOT NULL,
+    date_of_birth DATE NOT NULL,
+    address VARCHAR2(255) NOT NULL,
+    risk_category VARCHAR2(20) DEFAULT 'LOW' NOT NULL,
+    status VARCHAR2(20) DEFAULT 'ACTIVE' NOT NULL,
+    customer_tier VARCHAR2(20) DEFAULT 'BASIC' NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_customers PRIMARY KEY (id),
+    CONSTRAINT uk_customers_num UNIQUE (customer_number),
+    CONSTRAINT uk_customers_email UNIQUE (email)
+);
+
+-- Comprehensive Customer KYC, Video KYC (V-KYC) & Biometrics
+CREATE TABLE customer_kyc (
+    id VARCHAR2(36) NOT NULL,
+    customer_id VARCHAR2(36) NOT NULL,
+    id_type VARCHAR2(30) NOT NULL,
+    id_number VARCHAR2(255) NOT NULL,
+    document_url VARCHAR2(255) NOT NULL,
+    address_proof_type VARCHAR2(30),
+    address_proof_url VARCHAR2(255),
+    selfie_url VARCHAR2(255),
+    liveness_score NUMBER(5, 4),
+    liveness_status VARCHAR2(20),
+    video_kyc_url VARCHAR2(255),
+    audio_sample_url VARCHAR2(255),
+    geo_latitude NUMBER(10, 6),
+    geo_longitude NUMBER(10, 6),
+    ocr_extracted_data VARCHAR2(1000),
+    verification_status VARCHAR2(20) DEFAULT 'SUBMITTED' NOT NULL,
+    rejection_reason VARCHAR2(255),
+    verified_by VARCHAR2(50),
+    verified_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_customer_kyc PRIMARY KEY (id),
+    CONSTRAINT fk_kyc_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_kyc_cust_stat ON customer_kyc (customer_id, verification_status);
+
+-- Customer Credentials & Authentication (BCrypt + JWT Refresh Token Rotation)
+CREATE TABLE customer_credentials (
+    id VARCHAR2(36) NOT NULL,
+    customer_id VARCHAR2(36) NOT NULL,
+    username VARCHAR2(100) NOT NULL,
+    password_hash VARCHAR2(255) NOT NULL,
+    must_change_password NUMBER(1) DEFAULT 1 NOT NULL,
+    refresh_token VARCHAR2(255),
+    refresh_token_expiry TIMESTAMP WITH TIME ZONE,
+    failed_login_attempts NUMBER(5) DEFAULT 0 NOT NULL,
+    is_locked NUMBER(1) DEFAULT 0 NOT NULL,
+    last_login_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_cust_credentials PRIMARY KEY (id),
+    CONSTRAINT uk_cred_username UNIQUE (username),
+    CONSTRAINT uk_cred_customer UNIQUE (customer_id),
+    CONSTRAINT fk_cred_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_cred_username ON customer_credentials (username);
+CREATE INDEX idx_cred_refresh_token ON customer_credentials (refresh_token);
+
+-- Customer Action Audits Across All Services (Tracked via serviceId)
+CREATE TABLE customer_action_audits (
+    id VARCHAR2(36) NOT NULL,
+    customer_id VARCHAR2(36) NOT NULL,
+    service_id VARCHAR2(20) NOT NULL,
+    service_name VARCHAR2(100) NOT NULL,
+    action_type VARCHAR2(50) NOT NULL,
+    resource_id VARCHAR2(64),
+    details VARCHAR2(1000),
+    channel VARCHAR2(30),
+    ip_address VARCHAR2(45),
+    status VARCHAR2(20) NOT NULL,
+    timestamp TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_cust_act_audits PRIMARY KEY (id),
+    CONSTRAINT fk_cust_audit_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_cust_act_customer ON customer_action_audits (customer_id, timestamp);
+CREATE INDEX idx_cust_act_service ON customer_action_audits (service_id, action_type);
+
+-- Whitelisted Beneficiaries & Cooling-Off Period
+CREATE TABLE beneficiaries (
+    id VARCHAR2(36) NOT NULL,
+    customer_id VARCHAR2(36) NOT NULL,
+    beneficiary_name VARCHAR2(100) NOT NULL,
+    account_number VARCHAR2(34) NOT NULL,
+    bank_name VARCHAR2(100) NOT NULL,
+    routing_or_ifsc_code VARCHAR2(30) NOT NULL,
+    beneficiary_type VARCHAR2(20) NOT NULL,
+    max_transfer_limit NUMBER(19, 4) NOT NULL,
+    cooling_end_time TIMESTAMP WITH TIME ZONE NOT NULL,
+    is_active NUMBER(1) DEFAULT 1 NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_beneficiaries PRIMARY KEY (id),
+    CONSTRAINT fk_ben_customer FOREIGN KEY (customer_id) REFERENCES customers(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_ben_cust_active ON beneficiaries (customer_id, is_active);
 
 -- Core Banking Accounts
 CREATE TABLE accounts (
@@ -61,6 +173,7 @@ CREATE TABLE account_audit_log (
     previous_balance NUMBER(19, 4),
     new_balance NUMBER(19, 4),
     actor_id VARCHAR2(64),
+    service_id VARCHAR2(20) DEFAULT 'SRV-ACC-002',
     ip_address VARCHAR2(45),
     correlation_id VARCHAR2(64),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
@@ -195,6 +308,173 @@ CREATE TABLE report_audit_logs (
 );
 
 CREATE INDEX idx_report_audit_acc_dt ON report_audit_logs (account_number, exported_at);
+
+-- Fixed & Term Deposits (Compound Interest & Premature Liquidation)
+CREATE TABLE term_deposits (
+    id VARCHAR2(36) NOT NULL,
+    deposit_number VARCHAR2(32) NOT NULL,
+    customer_id VARCHAR2(36) NOT NULL,
+    linked_account_number VARCHAR2(34) NOT NULL,
+    principal_amount NUMBER(19, 4) NOT NULL,
+    interest_rate NUMBER(6, 4) NOT NULL,
+    tenor_months NUMBER(10) NOT NULL,
+    compounding_frequency VARCHAR2(20) DEFAULT 'QUARTERLY' NOT NULL,
+    maturity_amount NUMBER(19, 4) NOT NULL,
+    start_date DATE NOT NULL,
+    maturity_date DATE NOT NULL,
+    status VARCHAR2(20) DEFAULT 'ACTIVE' NOT NULL,
+    premature_liquidated_at TIMESTAMP WITH TIME ZONE,
+    actual_payout_amount NUMBER(19, 4),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_term_deposits PRIMARY KEY (id),
+    CONSTRAINT uk_term_dep_num UNIQUE (deposit_number)
+);
+
+CREATE INDEX idx_term_dep_cust_stat ON term_deposits (customer_id, status);
+
+-- Saving Vaults, Saving Goals & Target Sub-Account Pots
+CREATE TABLE saving_vaults (
+    id VARCHAR2(36) NOT NULL,
+    customer_id VARCHAR2(36) NOT NULL,
+    parent_account_number VARCHAR2(34) NOT NULL,
+    vault_name VARCHAR2(100) NOT NULL,
+    target_amount NUMBER(19, 4) NOT NULL,
+    current_balance NUMBER(19, 4) DEFAULT 0.0000 NOT NULL,
+    currency VARCHAR2(3) NOT NULL,
+    target_date DATE,
+    lock_status VARCHAR2(20) DEFAULT 'UNLOCKED' NOT NULL,
+    auto_roundup_enabled NUMBER(1) DEFAULT 0 NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_saving_vaults PRIMARY KEY (id)
+);
+
+CREATE INDEX idx_vault_customer ON saving_vaults (customer_id);
+CREATE INDEX idx_vault_parent_acc ON saving_vaults (parent_account_number);
+
+-- Recurring Payments & Standing Instructions (SI)
+CREATE TABLE standing_instructions (
+    id VARCHAR2(36) NOT NULL,
+    instruction_name VARCHAR2(100) NOT NULL,
+    customer_id VARCHAR2(36) NOT NULL,
+    source_account_number VARCHAR2(34) NOT NULL,
+    target_account_number VARCHAR2(34) NOT NULL,
+    amount NUMBER(19, 4) NOT NULL,
+    currency VARCHAR2(3) NOT NULL,
+    frequency VARCHAR2(20) NOT NULL,
+    execution_day NUMBER(5),
+    next_execution_date DATE NOT NULL,
+    category VARCHAR2(30) NOT NULL,
+    status VARCHAR2(20) DEFAULT 'ACTIVE' NOT NULL,
+    total_executions_count NUMBER(10) DEFAULT 0 NOT NULL,
+    last_executed_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_standing_instructions PRIMARY KEY (id)
+);
+
+CREATE INDEX idx_si_customer ON standing_instructions (customer_id, status);
+CREATE INDEX idx_si_next_exec ON standing_instructions (next_execution_date, status);
+
+-- Cards (Debit, Credit, Virtual) with Mobile Controls & Dynamic CVV
+CREATE TABLE cards (
+    id VARCHAR2(36) NOT NULL,
+    card_number VARCHAR2(19) NOT NULL,
+    card_network VARCHAR2(20) NOT NULL,
+    card_type VARCHAR2(20) NOT NULL,
+    customer_id VARCHAR2(36) NOT NULL,
+    linked_account_number VARCHAR2(34) NOT NULL,
+    card_holder_name VARCHAR2(100) NOT NULL,
+    expiry_month NUMBER(2) NOT NULL,
+    expiry_year NUMBER(4) NOT NULL,
+    cvv_hash VARCHAR2(64) NOT NULL,
+    pin_hash VARCHAR2(64),
+    status VARCHAR2(20) DEFAULT 'ACTIVE' NOT NULL,
+    daily_limit NUMBER(19, 4) NOT NULL,
+    is_international_enabled NUMBER(1) DEFAULT 0 NOT NULL,
+    is_contactless_enabled NUMBER(1) DEFAULT 1 NOT NULL,
+    is_online_enabled NUMBER(1) DEFAULT 1 NOT NULL,
+    is_atm_enabled NUMBER(1) DEFAULT 1 NOT NULL,
+    is_pos_enabled NUMBER(1) DEFAULT 1 NOT NULL,
+    reward_points NUMBER(19) DEFAULT 0 NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_cards PRIMARY KEY (id),
+    CONSTRAINT uk_cards_number UNIQUE (card_number)
+);
+
+CREATE INDEX idx_cards_cust_stat ON cards (customer_id, status);
+
+-- Mobile App Device Push Registration (iOS APNs / Android FCM & Biometrics)
+CREATE TABLE mobile_device_registrations (
+    id VARCHAR2(36) NOT NULL,
+    customer_id VARCHAR2(36) NOT NULL,
+    platform VARCHAR2(20) NOT NULL,
+    device_token VARCHAR2(512) NOT NULL,
+    device_model VARCHAR2(100),
+    os_version VARCHAR2(50),
+    app_version VARCHAR2(50),
+    biometric_key VARCHAR2(512),
+    is_active NUMBER(1) DEFAULT 1 NOT NULL,
+    registered_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    last_active_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_mobile_dev_reg PRIMARY KEY (id)
+);
+
+CREATE INDEX idx_mobile_cust_act ON mobile_device_registrations (customer_id, is_active);
+CREATE INDEX idx_mobile_dev_tok ON mobile_device_registrations (device_token);
+
+-- Loans & Lending Lifecycle
+CREATE TABLE loans (
+    id VARCHAR2(36) NOT NULL,
+    loan_account_number VARCHAR2(34) NOT NULL,
+    customer_id VARCHAR2(36) NOT NULL,
+    loan_type VARCHAR2(30) NOT NULL,
+    principal_amount NUMBER(19, 4) NOT NULL,
+    annual_interest_rate NUMBER(6, 4) NOT NULL,
+    tenure_months NUMBER(5) NOT NULL,
+    emi_amount NUMBER(19, 4) NOT NULL,
+    status VARCHAR2(30) DEFAULT 'APPLIED' NOT NULL,
+    disbursement_account VARCHAR2(34) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_loans PRIMARY KEY (id),
+    CONSTRAINT uk_loan_acc UNIQUE (loan_account_number)
+);
+
+CREATE INDEX idx_loans_cust_stat ON loans (customer_id, status);
+
+-- Loan Repayment Amortization Schedule
+CREATE TABLE loan_repayment_schedule (
+    id VARCHAR2(36) NOT NULL,
+    loan_id VARCHAR2(36) NOT NULL,
+    installment_number NUMBER(5) NOT NULL,
+    due_date DATE NOT NULL,
+    principal_component NUMBER(19, 4) NOT NULL,
+    interest_component NUMBER(19, 4) NOT NULL,
+    total_installment NUMBER(19, 4) NOT NULL,
+    remaining_balance NUMBER(19, 4) NOT NULL,
+    status VARCHAR2(20) DEFAULT 'PENDING' NOT NULL,
+    CONSTRAINT pk_loan_schedule PRIMARY KEY (id),
+    CONSTRAINT fk_loan_sched_loan FOREIGN KEY (loan_id) REFERENCES loans(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_loan_sched_due ON loan_repayment_schedule (loan_id, due_date);
+
+-- Loan Repayments & Foreclosure Transactions
+CREATE TABLE loan_repayments (
+    id VARCHAR2(36) NOT NULL,
+    loan_id VARCHAR2(36) NOT NULL,
+    customer_id VARCHAR2(36) NOT NULL,
+    amount_paid NUMBER(19, 4) NOT NULL,
+    payment_type VARCHAR2(30) NOT NULL,
+    payment_method VARCHAR2(50) NOT NULL,
+    transaction_reference VARCHAR2(100) NOT NULL,
+    paid_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_loan_repayments PRIMARY KEY (id),
+    CONSTRAINT fk_repay_loan FOREIGN KEY (loan_id) REFERENCES loans(id)
+);
+
+CREATE INDEX idx_repay_loan_dt ON loan_repayments (loan_id, paid_at DESC);
 
 -- ====================================================================================
 -- 3. ORACLE 19c PL/SQL PACKAGES & PROCEDURES

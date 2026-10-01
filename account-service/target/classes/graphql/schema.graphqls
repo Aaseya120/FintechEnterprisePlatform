@@ -1,0 +1,89 @@
+type Query {
+    accountByNumber(accountNumber: String!): Account
+    accountsByCustomer(customerId: String!): [Account]
+    accountBalance(accountNumber: String!): BalanceInfo
+    legacyCbsAccount(accountNumber: String!): LegacyCbsAccountInquiry
+    legacyCbsHealth: LegacyCbsHealthStatus
+}
+
+type Mutation {
+    openAccount(input: OpenAccountInput!): Account
+    debitAccount(accountNumber: String!, amount: Float!): Account
+    creditAccount(accountNumber: String!, amount: Float!): Account
+    postLegacyCbsTransaction(input: LegacyCbsPostInput!): LegacyCbsPostResult
+}
+
+input OpenAccountInput {
+    customerId: String!
+    accountType: AccountType!
+    currency: String!
+    initialDeposit: Float!
+}
+
+input LegacyCbsPostInput {
+    transactionRef: String!
+    sourceAccount: String!
+    targetAccount: String!
+    amount: Float!
+    currency: String!
+    narration: String!
+}
+
+enum AccountType {
+    CHECKING
+    SAVINGS
+    MONEY_MARKET
+    INVESTMENT
+}
+
+enum AccountStatus {
+    ACTIVE
+    DORMANT
+    FROZEN
+    CLOSED
+}
+
+type Account {
+    id: ID!
+    accountNumber: String!
+    customerId: String!
+    accountType: AccountType!
+    currency: String!
+    balance: Float!
+    availableBalance: Float!
+    status: AccountStatus!
+    createdAt: String
+    updatedAt: String
+}
+
+type BalanceInfo {
+    accountNumber: String!
+    availableBalance: Float!
+}
+
+type LegacyCbsAccountInquiry {
+    legacyAccountRef: String!
+    coreSystemName: String!
+    ledgerBalance: Float!
+    availableBalance: Float!
+    currency: String!
+    status: String!
+    lastSyncedAt: String
+}
+
+type LegacyCbsPostResult {
+    cbsHostRef: String!
+    status: String!
+    updatedBalance: Float!
+    responseCode: String!
+    message: String!
+    postedAt: String
+}
+
+type LegacyCbsHealthStatus {
+    coreSystem: String!
+    endpointUrl: String!
+    status: String!
+    latencyMs: Int!
+    timestamp: String
+}

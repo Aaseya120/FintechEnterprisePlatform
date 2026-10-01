@@ -1,0 +1,234 @@
+global:
+  environment: production
+  awsRegion: us-east-1
+  clusterName: banking-eks-prod
+
+image:
+  repository: 123456789012.dkr.ecr.us-east-1.amazonaws.com/banking
+  pullPolicy: IfNotPresent
+  tag: "1.0.0"
+
+# Enterprise Production Microservices Specifications
+services:
+  apiGateway:
+    name: api-gateway
+    imageSuffix: api-gateway
+    port: 8080
+    replicas: 3
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 20
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+  accountService:
+    name: account-service
+    imageSuffix: account-service
+    port: 8081
+    replicas: 4
+    resources:
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+      limits:
+        cpu: "4000m"
+        memory: "4Gi"
+    autoscaling:
+      enabled: true
+      minReplicas: 4
+      maxReplicas: 30
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+  paymentService:
+    name: payment-service
+    imageSuffix: payment-service
+    port: 8082
+    replicas: 4
+    resources:
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+      limits:
+        cpu: "4000m"
+        memory: "4Gi"
+    autoscaling:
+      enabled: true
+      minReplicas: 4
+      maxReplicas: 30
+      targetCPUUtilizationPercentage: 70
+      targetMemoryUtilizationPercentage: 80
+
+  exchangeRateService:
+    name: exchange-rate-service
+    imageSuffix: exchange-rate-service
+    port: 8083
+    replicas: 2
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 75
+
+  customerService:
+    name: customer-service
+    imageSuffix: customer-service
+    port: 8084
+    replicas: 3
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 15
+      targetCPUUtilizationPercentage: 70
+
+  cardService:
+    name: card-service
+    imageSuffix: card-service
+    port: 8085
+    replicas: 3
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 15
+      targetCPUUtilizationPercentage: 70
+
+  loanService:
+    name: loan-service
+    imageSuffix: loan-service
+    port: 8086
+    replicas: 2
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 75
+
+  fraudDetectionService:
+    name: fraud-detection-service
+    imageSuffix: fraud-detection-service
+    port: 8087
+    replicas: 3
+    resources:
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+      limits:
+        cpu: "3000m"
+        memory: "4Gi"
+    autoscaling:
+      enabled: true
+      minReplicas: 3
+      maxReplicas: 25
+      targetCPUUtilizationPercentage: 65
+
+  notificationService:
+    name: notification-service
+    imageSuffix: notification-service
+    port: 8088
+    replicas: 2
+    resources:
+      requests:
+        cpu: "250m"
+        memory: "512Mi"
+      limits:
+        cpu: "1000m"
+        memory: "1Gi"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 12
+      targetCPUUtilizationPercentage: 75
+
+  reportingService:
+    name: reporting-service
+    imageSuffix: reporting-service
+    port: 8089
+    replicas: 2
+    resources:
+      requests:
+        cpu: "500m"
+        memory: "1Gi"
+      limits:
+        cpu: "2000m"
+        memory: "2Gi"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+      targetCPUUtilizationPercentage: 75
+
+  batchService:
+    name: batch-service
+    imageSuffix: batch-service
+    port: 8090
+    replicas: 2
+    resources:
+      requests:
+        cpu: "1000m"
+        memory: "2Gi"
+      limits:
+        cpu: "4000m"
+        memory: "4Gi"
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 8
+      targetCPUUtilizationPercentage: 80
+
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: arn:aws:acm:us-east-1:123456789012:certificate/uuid-bank-cert
+    alb.ingress.kubernetes.io/healthcheck-path: /actuator/health
+  hosts:
+    - host: api.banking.corp
+      paths:
+        - path: /
+          pathType: Prefix
+          service: api-gateway
+          port: 8080
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 2

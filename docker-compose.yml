@@ -1,0 +1,288 @@
+version: '3.8'
+
+services:
+  # Database Tier (PostgreSQL / Oracle 19c compatible)
+  banking-db:
+    image: postgres:16-alpine
+    container_name: banking-postgres
+    environment:
+      POSTGRES_DB: banking_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d banking_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Redis / AWS ElastiCache In-Memory Tier
+  banking-redis:
+    image: redis:7-alpine
+    container_name: banking-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Apache Kafka Event Streaming (KRaft Mode)
+  banking-kafka:
+    image: confluentinc/cp-kafka:7.6.1
+    container_name: banking-kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://banking-kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@banking-kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://0.0.0.0:29092,CONTROLLER://0.0.0.0:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
+      CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
+
+  # Keycloak IAM & OAuth2 Authorization Server
+  banking-keycloak:
+    image: quay.io/keycloak/keycloak:24.0.5
+    container_name: banking-keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: adminpassword
+    ports:
+      - "8180:8080"
+
+  # Prometheus Observability
+  banking-prometheus:
+    image: prom/prometheus:v2.52.0
+    container_name: banking-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  # Grafana Performance Dashboards
+  banking-grafana:
+    image: grafana/grafana:11.0.0
+    container_name: banking-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - banking-prometheus
+
+  # Microservices
+  api-gateway:
+    build:
+      context: .
+      args:
+        MODULE_NAME: api-gateway
+    container_name: api-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      REDIS_HOST: banking-redis
+      ACCOUNT_SERVICE_URL: http://account-service:8081
+      PAYMENT_SERVICE_URL: http://payment-service:8082
+      EXCHANGE_RATE_SERVICE_URL: http://exchange-rate-service:8083
+      KEYCLOAK_JWK_SET_URI: http://banking-keycloak:8080/realms/banking-realm/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URI: http://banking-keycloak:8080/realms/banking-realm
+    depends_on:
+      banking-redis:
+        condition: service_healthy
+
+  account-service:
+    build:
+      context: .
+      args:
+        MODULE_NAME: account-service
+    container_name: account-service
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://banking-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
+      REDIS_HOST: banking-redis
+      KEYCLOAK_JWK_SET_URI: http://banking-keycloak:8080/realms/banking-realm/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URI: http://banking-keycloak:8080/realms/banking-realm
+    depends_on:
+      banking-db:
+        condition: service_healthy
+      banking-redis:
+        condition: service_healthy
+
+  payment-service:
+    build:
+      context: .
+      args:
+        MODULE_NAME: payment-service
+    container_name: payment-service
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://banking-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
+      REDIS_HOST: banking-redis
+      KAFKA_BOOTSTRAP_SERVERS: banking-kafka:29092
+      ACCOUNT_SERVICE_URL: http://account-service:8081
+      KEYCLOAK_JWK_SET_URI: http://banking-keycloak:8080/realms/banking-realm/protocol/openid-connect/certs
+      KEYCLOAK_ISSUER_URI: http://banking-keycloak:8080/realms/banking-realm
+    depends_on:
+      banking-db:
+        condition: service_healthy
+      banking-redis:
+        condition: service_healthy
+
+  exchange-rate-service:
+    build:
+      context: .
+      args:
+        MODULE_NAME: exchange-rate-service
+    container_name: exchange-rate-service
+    ports:
+      - "8083:8083"
+    environment:
+      REDIS_HOST: banking-redis
+    depends_on:
+      banking-redis:
+        condition: service_healthy
+
+  customer-service:
+    build:
+      context: .
+      args:
+        MODULE_NAME: customer-service
+    container_name: customer-service
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://banking-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
+      KAFKA_BOOTSTRAP_SERVERS: banking-kafka:29092
+    depends_on:
+      banking-db:
+        condition: service_healthy
+
+  loan-service:
+    build:
+      context: .
+      args:
+        MODULE_NAME: loan-service
+    container_name: loan-service
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://banking-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
+      KAFKA_BOOTSTRAP_SERVERS: banking-kafka:29092
+    depends_on:
+      banking-db:
+        condition: service_healthy
+
+  card-service:
+    build:
+      context: .
+      args:
+        MODULE_NAME: card-service
+    container_name: card-service
+    ports:
+      - "8086:8086"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://banking-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
+      KAFKA_BOOTSTRAP_SERVERS: banking-kafka:29092
+    depends_on:
+      banking-db:
+        condition: service_healthy
+
+  fraud-detection-service:
+    build:
+      context: .
+      args:
+        MODULE_NAME: fraud-detection-service
+    container_name: fraud-detection-service
+    ports:
+      - "8087:8087"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://banking-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
+      REDIS_HOST: banking-redis
+    depends_on:
+      banking-db:
+        condition: service_healthy
+      banking-redis:
+        condition: service_healthy
+
+  notification-service:
+    build:
+      context: .
+      args:
+        MODULE_NAME: notification-service
+    container_name: notification-service
+    ports:
+      - "8088:8088"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://banking-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
+      KAFKA_BOOTSTRAP_SERVERS: banking-kafka:29092
+    depends_on:
+      banking-db:
+        condition: service_healthy
+
+  reporting-service:
+    build:
+      context: .
+      args:
+        MODULE_NAME: reporting-service
+    container_name: reporting-service
+    ports:
+      - "8089:8089"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://banking-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
+    depends_on:
+      banking-db:
+        condition: service_healthy
+
+  batch-service:
+    build:
+      context: .
+      args:
+        MODULE_NAME: batch-service
+    container_name: batch-service
+    ports:
+      - "8090:8090"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://banking-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
+    depends_on:
+      banking-db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

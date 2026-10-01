@@ -1,0 +1,9 @@
+apiVersion: v2
+name: banking-platform
+description: Enterprise Helm Chart for Core Banking Microservices Architecture on AWS EKS
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+maintainers:
+  - name: Core Banking Cloud Platform Team
+    email: devops-banking@corp.internal

@@ -1,0 +1,6 @@
+-- Flyway Migration V2: Seed Production-Grade Card Sample Data
+
+INSERT INTO cards (id, card_number, card_network, card_type, customer_id, linked_account_number, card_holder_name, expiry_month, expiry_year, cvv_hash, pin_hash, status, daily_limit, is_international_enabled, is_contactless_enabled, created_at, updated_at) VALUES
+('CRD-001', '4532984710291098', 'VISA', 'DEBIT', 'CUST-001', 'US1000000001', 'ALEXANDER HAMILTON', 12, 2028, 'a665a45920422f9d417e4867efdc4fb8a04a1f3fff1fa07e998e86f7f7a27ae3', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'ACTIVE', 5000.0000, TRUE, TRUE, NOW() - INTERVAL '60 days', NOW()),
+('CRD-002', '5425891240918471', 'MASTERCARD', 'CREDIT', 'CUST-001', 'US1000000001', 'ALEXANDER HAMILTON', 8, 2029, 'b89eaac7e61417341b710b7277882934ec0128212623d3876939923bb69986b2', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'ACTIVE', 10000.0000, TRUE, TRUE, NOW() - INTERVAL '50 days', NOW()),
+('CRD-003', '6078129038472910', 'RUPAY', 'DEBIT', 'CUST-005', 'IN5000000001', 'RAJESH PATEL', 5, 2027, '60b641753909772a8c30c883a9a7a0b3f550ee98c2fa8e71fcbe5e638217bb66', 'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', 'ACTIVE', 2500.0000, FALSE, TRUE, NOW() - INTERVAL '30 days', NOW());

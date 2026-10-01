@@ -1,0 +1,54 @@
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  - job_name: 'api-gateway'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['api-gateway:8080']
+
+  - job_name: 'account-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['account-service:8081']
+
+  - job_name: 'payment-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['payment-service:8082']
+
+  - job_name: 'exchange-rate-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['exchange-rate-service:8083']
+
+  - job_name: 'customer-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['customer-service:8084']
+
+  - job_name: 'loan-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['loan-service:8085']
+
+  - job_name: 'card-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['card-service:8086']
+
+  - job_name: 'fraud-detection-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['fraud-detection-service:8087']
+
+  - job_name: 'notification-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['notification-service:8088']
+
+  - job_name: 'reporting-service'
+    metrics_path: '/actuator/prometheus'
+    static_configs:
+      - targets: ['reporting-service:8089']

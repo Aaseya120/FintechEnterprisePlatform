@@ -1,0 +1,16 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+{{- range $key, $service := .Values.services }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ $service.name }}-pdb
+  labels:
+    app.kubernetes.io/name: {{ $service.name }}
+spec:
+  minAvailable: {{ $.Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ $service.name }}
+---
+{{- end }}
+{{- end }}

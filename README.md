@@ -50,8 +50,8 @@ graph TD
 | [**payment-service**](file:///d:/Projects/Resume_Project/payment-service) | `8082` | Distributed fund transfers, 2-phase Saga, Multi-rail gateways | Kafka, Outbox Pattern, Strategy Pattern |
 | [**exchange-rate-service**](file:///d:/Projects/Resume_Project/exchange-rate-service) | `8083` | Global currencies, dynamic interbank FX ticker, quotes | Redis Cache, Scheduled Brownian motion |
 | [**customer-service**](file:///d:/Projects/Resume_Project/customer-service) | `8084` | Digital onboarding, KYC lifecycle, Beneficiary cooling-off | AES-256-GCM Crypto, Flyway |
-| [**card-service**](file:///d:/Projects/Resume_Project/card-service) | `8085` | Debit/Credit issuance, Luhn check digit, PIN hashing | SHA-256, PCI-DSS Masking |
-| [**loan-service**](file:///d:/Projects/Resume_Project/loan-service) | `8086` | Loan underwriting, mathematical EMI formula, amortization | Spring Data JPA, Amortization Math |
+| [**loan-service**](file:///d:/Projects/Resume_Project/loan-service) | `8085` | Loan underwriting, mathematical EMI formula, amortization | Spring Data JPA, Amortization Math |
+| [**card-service**](file:///d:/Projects/Resume_Project/card-service) | `8086` | Debit/Credit issuance, Luhn check digit, PIN hashing | SHA-256, PCI-DSS Masking |
 | [**fraud-detection-service**](file:///d:/Projects/Resume_Project/fraud-detection-service) | `8087` | Real-time sliding window velocity rules, risk decisions | Redis Sorted Sets, Risk Rule Engine |
 | [**notification-service**](file:///d:/Projects/Resume_Project/notification-service) | `8088` | Omni-channel alerts (SMS, Email, Push FCM/APNS) | Kafka Consumer, Twilio/SendGrid mock |
 | [**reporting-service**](file:///d:/Projects/Resume_Project/reporting-service) | `8089` | Statement export (PDF, Excel, CSV, JSON) and import | OpenPDF, Apache POI 5.3, Strategy Pattern |

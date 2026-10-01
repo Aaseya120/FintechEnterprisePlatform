@@ -11,7 +11,7 @@ BEGIN
                     WHERE object_type IN ('TABLE', 'PACKAGE', 'SEQUENCE')
                       AND object_name IN ('ACCOUNTS', 'ACCOUNT_AUDIT_LOG', 'TRANSFERS', 'OUTBOX_EVENTS', 
                                           'STG_CLEARING_TRANSACTIONS', 'RECON_RUNS', 'RECON_BREAKS',
-                                          'EXCHANGE_RATES', 'FX_RATE_HISTORY', 'PKG_BANKING_CORE',
+                                          'EXCHANGE_RATES', 'FX_RATE_HISTORY', 'REPORT_AUDIT_LOGS', 'PKG_BANKING_CORE',
                                           'PKG_FOREX_SETTLEMENT', 'PKG_RECONCILIATION_ENGINE')) 
     LOOP
         BEGIN
@@ -180,6 +180,21 @@ CREATE TABLE exchange_rates (
     CONSTRAINT pk_exchange_rates PRIMARY KEY (id),
     CONSTRAINT uk_fx_rates_pair UNIQUE (from_currency, to_currency)
 );
+
+-- Financial Reporting & Statement Export Audit Logs
+CREATE TABLE report_audit_logs (
+    id VARCHAR2(36) NOT NULL,
+    account_number VARCHAR2(34) NOT NULL,
+    export_format VARCHAR2(10) NOT NULL,
+    record_count NUMBER(10) NOT NULL,
+    file_size_bytes NUMBER(19) NOT NULL,
+    file_name VARCHAR2(255) NOT NULL,
+    requested_by VARCHAR2(50),
+    exported_at TIMESTAMP WITH TIME ZONE DEFAULT SYSTIMESTAMP NOT NULL,
+    CONSTRAINT pk_report_audit_logs PRIMARY KEY (id)
+);
+
+CREATE INDEX idx_report_audit_acc_dt ON report_audit_logs (account_number, exported_at);
 
 -- ====================================================================================
 -- 3. ORACLE 19c PL/SQL PACKAGES & PROCEDURES
@@ -546,5 +561,11 @@ VALUES ('FX-USD-GBP', 'USD', 'GBP', 0.792000, 0.791208, 0.792792, 0.0020, 0.25, 
 
 INSERT INTO exchange_rates (id, from_currency, to_currency, mid_rate, bid_rate, ask_rate, spread_percentage, change_24h_percentage, last_updated_at)
 VALUES ('FX-USD-INR', 'USD', 'INR', 83.450000, 83.366550, 83.533450, 0.0020, 0.05, SYSTIMESTAMP);
+
+INSERT INTO report_audit_logs (id, account_number, export_format, record_count, file_size_bytes, file_name, requested_by, exported_at)
+VALUES ('RPT-AUD-ORA-01', 'US1000000001', 'PDF', 14, 42890, 'statement_US1000000001.pdf', 'CUSTOMER_PORTAL', SYSTIMESTAMP - 3);
+
+INSERT INTO report_audit_logs (id, account_number, export_format, record_count, file_size_bytes, file_name, requested_by, exported_at)
+VALUES ('RPT-AUD-ORA-02', 'US1000000001', 'EXCEL', 14, 18450, 'statement_US1000000001.xlsx', 'CUSTOMER_PORTAL', SYSTIMESTAMP - 2);
 
 COMMIT;

@@ -10,13 +10,17 @@ import com.banking.reporting.importing.ImportModels.ImportedTransactionDto;
 import com.banking.reporting.importing.ImportModels.TransactionImportParser;
 import com.banking.reporting.importing.ImportParserFactory;
 import com.banking.reporting.service.ReportingService;
+import com.banking.reporting.domain.ReportAuditLog;
+import com.banking.reporting.repository.ReportAuditLogRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Facade Pattern: Unified subsystem facade orchestrating statement generation,
@@ -30,13 +34,16 @@ public class TransactionReportingFacade {
     private final ReportingService reportingService;
     private final ExportStrategyFactory exportStrategyFactory;
     private final ImportParserFactory importParserFactory;
+    private final ReportAuditLogRepository auditLogRepository;
 
     public TransactionReportingFacade(ReportingService reportingService,
                                       ExportStrategyFactory exportStrategyFactory,
-                                      ImportParserFactory importParserFactory) {
+                                      ImportParserFactory importParserFactory,
+                                      ReportAuditLogRepository auditLogRepository) {
         this.reportingService = reportingService;
         this.exportStrategyFactory = exportStrategyFactory;
         this.importParserFactory = importParserFactory;
+        this.auditLogRepository = auditLogRepository;
     }
 
     public StatementResponseDto getStatementData(TransactionSearchCriteria criteria) {
@@ -55,7 +62,30 @@ public class TransactionReportingFacade {
         byte[] bytes = strategy.export(statementData);
         String fileName = String.format("statement_%s.%s", criteria.accountNumber(), strategy.getFileExtension());
 
+        try {
+            ReportAuditLog auditLog = new ReportAuditLog(
+                    UUID.randomUUID().toString(),
+                    criteria.accountNumber(),
+                    format.name(),
+                    statementData.transactions().size(),
+                    (long) bytes.length,
+                    fileName,
+                    "USER_REQUEST",
+                    Instant.now()
+            );
+            auditLogRepository.save(auditLog);
+        } catch (Exception e) {
+            log.warn("Failed to persist report audit record: {}", e.getMessage());
+        }
+
         return new ExportPayload(bytes, strategy.getContentType(), fileName);
+    }
+
+    public List<ReportAuditLog> getAuditLogs(String accountNumber) {
+        if (accountNumber != null && !accountNumber.isBlank()) {
+            return auditLogRepository.findByAccountNumberOrderByExportedAtDesc(accountNumber);
+        }
+        return auditLogRepository.findTop20ByOrderByExportedAtDesc();
     }
 
     public List<ImportedTransactionDto> importTransactions(MultipartFile file) {

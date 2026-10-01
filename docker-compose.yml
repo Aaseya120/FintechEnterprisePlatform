@@ -101,6 +101,13 @@ services:
       ACCOUNT_SERVICE_URL: http://account-service:8081
       PAYMENT_SERVICE_URL: http://payment-service:8082
       EXCHANGE_RATE_SERVICE_URL: http://exchange-rate-service:8083
+      CUSTOMER_SERVICE_URL: http://customer-service:8084
+      LOAN_SERVICE_URL: http://loan-service:8085
+      CARD_SERVICE_URL: http://card-service:8086
+      FRAUD_SERVICE_URL: http://fraud-detection-service:8087
+      NOTIFICATION_SERVICE_URL: http://notification-service:8088
+      REPORTING_SERVICE_URL: http://reporting-service:8089
+      BATCH_SERVICE_URL: http://batch-service:8090
       KEYCLOAK_JWK_SET_URI: http://banking-keycloak:8080/realms/banking-realm/protocol/openid-connect/certs
       KEYCLOAK_ISSUER_URI: http://banking-keycloak:8080/realms/banking-realm
     depends_on:
@@ -160,8 +167,13 @@ services:
     ports:
       - "8083:8083"
     environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://banking-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
       REDIS_HOST: banking-redis
     depends_on:
+      banking-db:
+        condition: service_healthy
       banking-redis:
         condition: service_healthy
 

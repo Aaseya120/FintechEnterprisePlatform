@@ -3,6 +3,7 @@ package com.banking.card.service;
 import com.banking.card.domain.Card;
 import com.banking.card.dto.CardDtos.*;
 import com.banking.card.repository.CardRepository;
+import com.banking.common.crypto.DataMaskingUtil;
 import com.banking.common.exception.ResourceNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -153,13 +154,13 @@ public class CardService {
     }
 
     private String getMasked(String pan) {
-        return com.banking.common.crypto.DataMaskingUtil.maskCardNumber(pan);
+        return DataMaskingUtil.maskCardNumber(pan);
     }
 
     private CardResponseDto mapToDto(Card c) {
         return new CardResponseDto(
                 c.getId(),
-                com.banking.common.crypto.DataMaskingUtil.maskCardNumber(c.getCardNumber()),
+                DataMaskingUtil.maskCardNumber(c.getCardNumber()),
                 c.getCardNetwork(),
                 c.getCardType(),
                 c.getCustomerId(),

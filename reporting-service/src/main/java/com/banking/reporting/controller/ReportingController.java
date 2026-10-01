@@ -1,6 +1,7 @@
 package com.banking.reporting.controller;
 
 import com.banking.common.dto.ApiResponse;
+import com.banking.reporting.domain.ReportAuditLog;
 import com.banking.reporting.dto.ReportingDtos.StatementResponseDto;
 import com.banking.reporting.dto.ReportingDtos.TransactionSearchCriteria;
 import com.banking.reporting.export.ExportFormat;
@@ -80,5 +81,17 @@ public class ReportingController {
         String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();
         List<ImportedTransactionDto> imported = reportingFacade.importTransactions(file);
         return ResponseEntity.ok(ApiResponse.success(imported, "Imported " + imported.size() + " transactions successfully", corrId));
+    }
+
+    @GetMapping("/audit-logs")
+    @Operation(summary = "Get Statement Export Audit Logs",
+               description = "Returns historical report export audit trail for compliance, SOX, and BCBS-239 tracking")
+    public ResponseEntity<ApiResponse<List<ReportAuditLog>>> getAuditLogs(
+            @RequestParam(required = false) String accountNumber,
+            @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId) {
+
+        String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();
+        List<ReportAuditLog> logs = reportingFacade.getAuditLogs(accountNumber);
+        return ResponseEntity.ok(ApiResponse.success(logs, corrId));
     }
 }

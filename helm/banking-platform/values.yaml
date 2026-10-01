@@ -106,7 +106,7 @@ services:
   cardService:
     name: card-service
     imageSuffix: card-service
-    port: 8085
+    port: 8086
     replicas: 3
     resources:
       requests:
@@ -124,7 +124,7 @@ services:
   loanService:
     name: loan-service
     imageSuffix: loan-service
-    port: 8086
+    port: 8085
     replicas: 2
     resources:
       requests:

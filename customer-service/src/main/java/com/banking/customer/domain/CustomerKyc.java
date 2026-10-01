@@ -1,5 +1,6 @@
 package com.banking.customer.domain;
 
+import com.banking.common.crypto.EncryptedStringConverter;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,7 +31,7 @@ public class CustomerKyc {
     @Column(name = "id_type", length = 30, nullable = false)
     private IdType idType;
 
-    @Convert(converter = com.banking.common.crypto.EncryptedStringConverter.class)
+    @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "id_number", length = 255, nullable = false)
     private String idNumber;
 

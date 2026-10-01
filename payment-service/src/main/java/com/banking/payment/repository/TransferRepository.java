@@ -22,4 +22,7 @@ public interface TransferRepository extends JpaRepository<Transfer, String> {
     Page<Transfer> findBySourceAccountOrderByCreatedAtDesc(String sourceAccount, Pageable pageable);
 
     Page<Transfer> findByTargetAccountOrderByCreatedAtDesc(String targetAccount, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Query("SELECT t FROM Transfer t WHERE t.status IN ('INITIATED', 'DEBITED') AND t.createdAt < :cutoff")
+    List<Transfer> findStalledTransfers(@org.springframework.data.repository.query.Param("cutoff") java.time.Instant cutoff);
 }

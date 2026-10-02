@@ -56,7 +56,7 @@ graph TD
 | [**customer-service**](file:///d:/Projects/Resume_Project/customer-service) | `8084` | Digital onboarding, KYC lifecycle, Beneficiary cooling-off | AES-256-GCM Crypto, Flyway |
 | [**loan-service**](file:///d:/Projects/Resume_Project/loan-service) | `8085` | Loan underwriting, mathematical EMI formula, amortization | Spring Data JPA, Amortization Math |
 | [**card-service**](file:///d:/Projects/Resume_Project/card-service) | `8086` | Debit/Credit issuance, Luhn check digit, PIN hashing | SHA-256, PCI-DSS Masking |
-| [**fraud-detection-service**](file:///d:/Projects/Resume_Project/fraud-detection-service) | `8087` | Real-time sliding window velocity rules, risk decisions | Redis Sorted Sets, Risk Rule Engine |
+| [**fraud-detection-service**](file:///d:/Projects/Resume_Project/fraud-detection-service) | `8087` | Real-time velocity rules, Spring AI risk reasoning | Redis Sorted Sets, Rule Engine, Spring AI |
 | [**notification-service**](file:///d:/Projects/Resume_Project/notification-service) | `8088` | Omni-channel alerts (SMS, Email, Push FCM/APNS) | Kafka Consumer, Twilio/SendGrid mock |
 | [**reporting-service**](file:///d:/Projects/Resume_Project/reporting-service) | `8089` | Statement export (PDF, Excel, CSV, JSON) and import | OpenPDF, Apache POI 5.3, Strategy Pattern |
 | [**batch-service**](file:///d:/Projects/Resume_Project/batch-service) | `8090` | High-volume clearing ingestion, Oracle PL/SQL, reconciliation | Spring Batch 5, Oracle 19c PL/SQL |
@@ -97,11 +97,14 @@ mvn spring-boot:run -pl exchange-rate-service
 ## 💡 Core Banking Capabilities
 
 - **Multi-Rail Payment Gateways:** Strategy Pattern implementation for **UPI** (VPA/RRN), **Cards** (3DS/Luhn), **NetBanking** (NEFT, RTGS, IMPS), and **PayPal**.
+- **Top 6 API Architecture Styles:** Full coverage of modern styles: **RESTful** (core endpoints), **SOAP/WSDL** (legacy CBS bridge), **GraphQL** (mobile dashboard composition), **Webhooks** (external gateway callbacks with HMAC), **WebSockets/SSE** (live FX ticker), and **gRPC** (sub-millisecond ledger RPC design).
+- **Spring AI & GenAI Risk Intelligence:** Automated AML anomaly explanation and compliance triage recommendation engine (`POST /api/v1/fraud/ai/analyze`).
 - **Distributed Saga & Outbox:** At-least-once transactional Kafka event publishing with automated compensation debit/credit rollbacks.
 - **Legacy CBS SOA Middleware:** Acts as an enterprise integration adapter bridging modern REST/GraphQL microservices to legacy Core Banking mainframes via SOAP XML envelopes with WS-Security headers and Resilience4j circuit breakers.
 - **Global Currencies & Dynamic FX:** ISO-4217 world currencies and ISO-3166 countries with IBAN/SWIFT validation, live interbank rate fluctuations with Bid/Ask spreads, and 60-second guaranteed quotes.
 - **Automated Clearing Reconciliation:** Automated matching between core ledgers and external clearing feeds with Exact Match and Tolerance Window rules, break tracking, and audit resolution workflows.
 - **Data Encryption & PCI-DSS Masking:** AES-256-GCM attribute encryption for sensitive KYC identification numbers, combined with centralized masking for PANs, account numbers, and emails.
+- **Automated CI/CD & DevSecOps:** GitHub Actions pipeline running JDK 21 compilation, Mockito tests, JaCoCo code coverage, SonarQube quality gate, OWASP dependency vulnerability check, multi-stage Docker builds, and Helm rolling upgrades to AWS EKS.
 
 ---
 

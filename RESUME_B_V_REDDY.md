@@ -14,13 +14,13 @@ Senior Java Backend Developer with over 8+ years of hands-on experience in devel
 ## CORE TECHNICAL SKILLS
 
 - **Languages:** Java 21 / 17 / 8, SQL, PL/SQL
-- **Frameworks:** Spring Boot 3.x/2.x, Spring Cloud Gateway, Spring Data JPA, Hibernate, Spring Batch
+- **Frameworks:** Spring Boot 3.x/2.x, Spring Cloud Gateway, Spring Data JPA, Hibernate, Spring Batch, Spring AI
 - **Messaging & Caching:** Apache Kafka (Producer, Consumer, Error Handlers, DLQ), Redis (Caching, TTLs)
 - **Fault Tolerance:** Resilience4j (Circuit Breakers, Retries, Fallbacks)
 - **Databases:** Oracle 19c, PostgreSQL, Flyway Migrations
-- **Security & APIs:** RESTful APIs, OpenAPI / Swagger, Spring Security, Stateless JWT, RBAC
+- **Security & APIs:** RESTful APIs, GraphQL, SOAP/XML, Webhooks, OpenAPI / Swagger, Spring Security, Stateless JWT, RBAC
 - **Cloud & DevOps:** AWS (EKS, EC2), Docker, Kubernetes, GitHub Actions, Jenkins, Git, Maven
-- **Monitoring & Testing:** Prometheus, Grafana, Splunk, Spring Boot Actuator, JUnit 5, Mockito
+- **Monitoring & Testing:** Prometheus, Grafana, Splunk, Spring Boot Actuator, JUnit 5, Mockito, SonarQube, JaCoCo
 
 ---
 
@@ -40,7 +40,8 @@ Senior Java Backend Developer with over 8+ years of hands-on experience in devel
 
 #### **Responsibilities & Hands-On Work:**
 - Developed backend microservices using **Java 21** and **Spring Boot 3.x** for core banking modules including payment processing, account management, bill payments, and card services.
-- Created RESTful APIs following standard HTTP methods and status codes, documenting request/response contracts using **Swagger / OpenAPI 3.0**.
+- Implemented multi-style API architecture: **RESTful** APIs for core operations, **GraphQL** for client-driven mobile dashboard composition, **SOAP/XML** for legacy CBS communication, and **Webhooks** with HMAC validation for external payment rails (PayPal/Stripe/UPI).
+- Built an AI-assisted fraud risk reasoning service using **Spring AI** abstractions to generate automated AML narrative summaries and recommended compliance triage actions.
 - Configured **Spring Cloud Gateway** routes and filters for request forwarding, rate limiting, and header enrichment.
 - Implemented API security using **Spring Security** with stateless **HMAC-SHA256 JWT** authentication, validating tokens and enforcing role-based permissions (RBAC).
 - Built Kafka producers and consumers for asynchronous transaction events, configuring topic partitions, serialization, and `@RetryableTopic` for retry handling.
@@ -49,7 +50,7 @@ Senior Java Backend Developer with over 8+ years of hands-on experience in devel
 - Implemented **Redis caching** (`@Cacheable`, `@CacheEvict`) with defined TTLs for account balances and currency rates to reduce repeated database queries.
 - Added idempotency check logic on payment APIs using Redis keys to prevent duplicate transactions caused by user double-clicks or client retries.
 - Created multi-stage **Dockerfiles** for containerizing microservices and deployed application pods onto **Kubernetes / AWS EKS**.
-- Wrote and maintained automated CI/CD pipeline steps in **GitHub Actions** and **Jenkins** for build validation and running automated tests.
+- Built and maintained automated CI/CD pipelines in **GitHub Actions** including automated Maven builds, unit testing, **JaCoCo** code coverage, and **SonarQube** code quality gates.
 - Wrote Spring Data JPA entities, custom repository queries, and created **Flyway** migration scripts for Oracle 19c and PostgreSQL database changes.
 - Configured **Spring Boot Actuator** health endpoints and checked application metrics in **Prometheus/Grafana** and server logs in **Splunk** during production deployments.
 - Wrote unit and integration test cases using **JUnit 5** and **Mockito**, maintaining code quality and resolving SonarQube code smells.

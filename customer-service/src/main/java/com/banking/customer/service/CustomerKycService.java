@@ -85,7 +85,12 @@ public class CustomerKycService {
         log.info("Digital V-KYC submission recorded for customer [{}] with ID [{}] and Address Proof [{}]",
                 customerId, dto.idType(), dto.addressProofType());
 
-        kafkaTemplate.send("banking.customer.kyc.submitted", customerId, saved);
+        kafkaTemplate.send("banking.customer.kyc.submitted", customerId, saved)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish kyc.submitted event for customer {}: {}", customerId, ex.getMessage());
+                    }
+                });
         return saved;
     }
 
@@ -102,11 +107,21 @@ public class CustomerKycService {
             customer.activate(); // Fully activates banking capabilities
             customerRepository.save(customer);
             log.info("KYC approved for customer [{}]. Account status set to ACTIVE.", customer.getId());
-            kafkaTemplate.send("banking.customer.kyc.approved", customer.getId(), kyc);
+            kafkaTemplate.send("banking.customer.kyc.approved", customer.getId(), kyc)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("Failed to publish kyc.approved event for customer {}: {}", customer.getId(), ex.getMessage());
+                        }
+                    });
         } else {
             kyc.reject(review.rejectionReason(), review.officerId());
             log.warn("KYC rejected for customer [{}]. Reason: {}", customer.getId(), review.rejectionReason());
-            kafkaTemplate.send("banking.customer.kyc.rejected", customer.getId(), kyc);
+            kafkaTemplate.send("banking.customer.kyc.rejected", customer.getId(), kyc)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("Failed to publish kyc.rejected event for customer {}: {}", customer.getId(), ex.getMessage());
+                        }
+                    });
         }
 
         return kycRepository.save(kyc);
@@ -156,7 +171,12 @@ public class CustomerKycService {
         event.put("temporaryPassword", temporaryPassword);
         event.put("approvedAt", Instant.now().toString());
 
-        kafkaTemplate.send("banking.customer.onboarded", savedCustomer.getId(), event);
+        kafkaTemplate.send("banking.customer.onboarded", savedCustomer.getId(), event)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish customer.onboarded event for customer {}: {}", savedCustomer.getId(), ex.getMessage());
+                    }
+                });
         log.info("Onboarding approved for customer [{}]. Generated Primary Account: {}, Login: {}",
                 savedCustomer.getId(), primaryAccountNumber, loginUsername);
 

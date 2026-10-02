@@ -88,7 +88,12 @@ public class CustomerService {
         );
 
         // Notify downstream via Kafka
-        kafkaTemplate.send("banking.customer.onboarded", saved.getId(), saved);
+        kafkaTemplate.send("banking.customer.onboarded", saved.getId(), saved)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish customer.onboarded event for customer {}: {}", saved.getId(), ex.getMessage());
+                    }
+                });
 
         return mapToDto(saved);
     }

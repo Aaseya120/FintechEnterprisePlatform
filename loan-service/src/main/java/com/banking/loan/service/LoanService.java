@@ -114,7 +114,12 @@ public class LoanService {
         generateAmortizationSchedule(saved);
 
         // Publish Loan Disbursed Event for Account Service to Credit Customer's Account
-        kafkaTemplate.send("banking.loan.disbursed", saved.getId(), saved);
+        kafkaTemplate.send("banking.loan.disbursed", saved.getId(), saved)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish loan.disbursed event for loan {}: {}", saved.getId(), ex.getMessage());
+                    }
+                });
         log.info("Loan disbursed: {}. Generated amortization schedule.", saved.getLoanAccountNumber());
 
         return mapToDto(saved);

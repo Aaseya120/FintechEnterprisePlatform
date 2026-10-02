@@ -16,8 +16,8 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Industry-standard Dynamic FX Rate Fluctuation Engine:
@@ -28,7 +28,6 @@ import java.util.UUID;
 public class DynamicForexRateEngine {
 
     private static final Logger log = LoggerFactory.getLogger(DynamicForexRateEngine.class);
-    private final Random random = new Random();
 
     private final ExchangeRateRepository rateRepository;
     private final FxRateHistoryRepository historyRepository;
@@ -73,7 +72,7 @@ public class DynamicForexRateEngine {
             }
 
             // Normal fluctuation delta between -0.15% and +0.15%
-            double deltaPercent = (random.nextDouble() * 0.30 - 0.15); // e.g. -0.05%
+            double deltaPercent = (ThreadLocalRandom.current().nextDouble() * 0.30 - 0.15); // e.g. -0.05%
             BigDecimal deltaMultiplier = BigDecimal.valueOf(1.0 + (deltaPercent / 100.0));
 
             BigDecimal oldMid = rate.getMidRate();

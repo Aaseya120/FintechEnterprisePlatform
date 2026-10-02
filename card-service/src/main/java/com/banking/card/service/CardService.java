@@ -11,10 +11,12 @@ import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.HexFormat;
 import java.util.List;
@@ -62,7 +64,12 @@ public class CardService {
         log.info("Issued {} {} for customer [{}]. Expiry: {}/{}",
                 req.cardNetwork(), req.cardType(), req.customerId(), expMonth, expYear);
 
-        kafkaTemplate.send("banking.card.issued", saved.getId(), saved);
+        kafkaTemplate.send("banking.card.issued", saved.getId(), saved)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish card.issued event for card {}: {}", saved.getId(), ex.getMessage());
+                    }
+                });
         return mapToDto(saved);
     }
 
@@ -150,7 +157,12 @@ public class CardService {
         card.freeze();
         Card saved = cardRepository.save(card);
         log.warn("Card ending in {} was FROZEN by customer via mobile app", getMasked(card.getCardNumber()));
-        kafkaTemplate.send("banking.card.frozen", card.getId(), "Card temporarily frozen by user");
+        kafkaTemplate.send("banking.card.frozen", card.getId(), "Card temporarily frozen by user")
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish card.frozen event for card {}: {}", card.getId(), ex.getMessage());
+                    }
+                });
         return mapToDto(saved);
     }
 
@@ -162,7 +174,12 @@ public class CardService {
         card.unfreeze();
         Card saved = cardRepository.save(card);
         log.info("Card ending in {} was UNFROZEN by customer via mobile app", getMasked(card.getCardNumber()));
-        kafkaTemplate.send("banking.card.unfrozen", card.getId(), "Card un-frozen by user");
+        kafkaTemplate.send("banking.card.unfrozen", card.getId(), "Card un-frozen by user")
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish card.unfrozen event for card {}: {}", card.getId(), ex.getMessage());
+                    }
+                });
         return mapToDto(saved);
     }
 
@@ -189,7 +206,7 @@ public class CardService {
                 card.getId(),
                 dynamicCvv,
                 validForSeconds,
-                java.time.Instant.ofEpochSecond(expiresAtEpochSec)
+                Instant.ofEpochSecond(expiresAtEpochSec)
         );
     }
 
@@ -198,7 +215,7 @@ public class CardService {
                 .orElseThrow(() -> new ResourceNotFoundException("Card", cardId));
 
         long pts = card.getRewardPoints();
-        java.math.BigDecimal cashValue = java.math.BigDecimal.valueOf(pts).multiply(new java.math.BigDecimal("0.02")); // $0.02 per point
+        BigDecimal cashValue = BigDecimal.valueOf(pts).multiply(new BigDecimal("0.02")); // $0.02 per point
         String tier = pts > 50000 ? "PLATINUM_REWARDS" : pts > 10000 ? "GOLD_REWARDS" : "SILVER_REWARDS";
 
         return new CardRewardDto(card.getId(), pts, cashValue, tier);
@@ -222,7 +239,12 @@ public class CardService {
         card.setStatus(Card.CardStatus.BLOCKED);
         Card saved = cardRepository.save(card);
         log.warn("Card ending in {} was BLOCKED. Reason: {}", getMasked(card.getCardNumber()), reason);
-        kafkaTemplate.send("banking.card.blocked", card.getId(), reason);
+        kafkaTemplate.send("banking.card.blocked", card.getId(), reason)
+                .whenComplete((result, ex) -> {
+                    if (ex != null) {
+                        log.error("Failed to publish card.blocked event for card {}: {}", card.getId(), ex.getMessage());
+                    }
+                });
         return mapToDto(saved);
     }
 

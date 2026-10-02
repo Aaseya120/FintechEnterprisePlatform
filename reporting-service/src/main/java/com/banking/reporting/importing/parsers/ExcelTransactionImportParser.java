@@ -52,9 +52,10 @@ public class ExcelTransactionImportParser implements TransactionImportParser {
         return results;
     }
 
+    private final DataFormatter dataFormatter = new DataFormatter();
+
     private String getCellString(Cell cell) {
         if (cell == null) return "";
-        cell.setCellType(CellType.STRING);
-        return cell.getStringCellValue().trim();
+        return dataFormatter.formatCellValue(cell).trim();
     }
 }

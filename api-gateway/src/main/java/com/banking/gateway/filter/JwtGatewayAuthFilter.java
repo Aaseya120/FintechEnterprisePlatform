@@ -18,6 +18,7 @@ import reactor.core.publisher.Mono;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Collections;
@@ -59,10 +60,12 @@ public class JwtGatewayAuthFilter implements WebFilter {
                 return chain.filter(exchange);
             }
 
-            // Verify HMAC-SHA256 signature
+            // Verify HMAC-SHA256 signature using constant-time comparison
             String dataToSign = parts[0] + "." + parts[1];
             String expectedSignature = sign(dataToSign);
-            if (!expectedSignature.equals(parts[2])) {
+            if (!MessageDigest.isEqual(
+                    expectedSignature.getBytes(StandardCharsets.UTF_8),
+                    parts[2].getBytes(StandardCharsets.UTF_8))) {
                 log.warn("JWT signature verification failed for request: {}", exchange.getRequest().getPath());
                 return rejectUnauthorized(exchange, "Invalid token signature");
             }
@@ -90,9 +93,11 @@ public class JwtGatewayAuthFilter implements WebFilter {
             UsernamePasswordAuthenticationToken authentication =
                     new UsernamePasswordAuthenticationToken(customerId, null, authorities);
 
-            // Propagate customerId downstream as a header for tracing
+            // Propagate customerId and roles downstream as headers for tracing & RBAC
+            String rolesHeader = String.join(",", roles);
             ServerWebExchange mutatedExchange = exchange.mutate()
-                    .request(r -> r.header("X-Authenticated-User", customerId))
+                    .request(r -> r.header("X-Authenticated-User", customerId)
+                                   .header("X-Authenticated-Roles", rolesHeader))
                     .build();
 
             return chain.filter(mutatedExchange)

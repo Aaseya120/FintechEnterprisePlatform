@@ -9,6 +9,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.*;
@@ -98,7 +99,11 @@ public class JwtTokenProvider {
 
             String dataToSign = parts[0] + "." + parts[1];
             String expectedSignature = sign(dataToSign);
-            if (!expectedSignature.equals(parts[2])) return false;
+            if (!MessageDigest.isEqual(
+                    expectedSignature.getBytes(StandardCharsets.UTF_8),
+                    parts[2].getBytes(StandardCharsets.UTF_8))) {
+                return false;
+            }
 
             // Check expiration
             Map<String, Object> claims = getClaims(token);

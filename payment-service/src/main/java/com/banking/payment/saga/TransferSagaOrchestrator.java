@@ -52,7 +52,7 @@ public class TransferSagaOrchestrator {
      * 3. Step 2: Credit Target Account
      * 4. Compensating Action: Reverse Debit if Credit fails
      */
-    @Transactional
+    @Transactional(noRollbackFor = BankingException.class)
     public TransferResponseDto executeTransferSaga(TransferRequestDto request, String idempotencyKey,
                                                    String channel, String correlationId) {
         String transferId = "tx_" + UUID.randomUUID().toString().replace("-", "").substring(0, 16);

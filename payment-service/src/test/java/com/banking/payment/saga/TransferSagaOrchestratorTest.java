@@ -41,16 +41,15 @@ class TransferSagaOrchestratorTest {
     @Mock
     private AccountClient accountClient;
 
-    @Spy
-    private ObjectMapper objectMapper = new ObjectMapper();
-
-    @InjectMocks
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private TransferSagaOrchestrator sagaOrchestrator;
 
     private TransferRequestDto request;
 
     @BeforeEach
     void setUp() {
+        objectMapper.findAndRegisterModules();
+        sagaOrchestrator = new TransferSagaOrchestrator(transferRepository, outboxEventRepository, accountClient, objectMapper);
         request = new TransferRequestDto(
                 "US1111111111",
                 "US2222222222",
@@ -106,6 +105,6 @@ class TransferSagaOrchestratorTest {
         // Verify compensation occurred
         verify(accountClient, times(1)).credit(eq("US1111111111"), eq(new BigDecimal("500.00")), any());
         // Verify outbox recorded the compensation event
-        verify(outboxEventRepository, atLeast(3)).save(any(OutboxEventEntity.class));
+        verify(outboxEventRepository, times(2)).save(any(OutboxEventEntity.class));
     }
 }

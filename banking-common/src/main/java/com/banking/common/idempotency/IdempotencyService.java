@@ -5,7 +5,7 @@ import com.banking.common.exception.DuplicateTransactionException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
@@ -23,10 +23,10 @@ public class IdempotencyService {
     private static final Logger log = LoggerFactory.getLogger(IdempotencyService.class);
     private static final String KEY_PREFIX = "idempotency:";
 
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisOperations<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
 
-    public IdempotencyService(RedisTemplate<String, Object> redisTemplate, ObjectMapper objectMapper) {
+    public IdempotencyService(RedisOperations<String, Object> redisTemplate, ObjectMapper objectMapper) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
     }

@@ -37,10 +37,7 @@ class AccountServiceTest {
     @Mock
     private AccountAuditLogRepository auditLogRepository;
 
-    @Spy
-    private AccountMapper accountMapper = new AccountMapper();
-
-    @InjectMocks
+    private final AccountMapper accountMapper = new AccountMapper();
     private AccountService accountService;
 
     private Account testAccount;
@@ -48,6 +45,7 @@ class AccountServiceTest {
 
     @BeforeEach
     void setUp() {
+        accountService = new AccountService(accountRepository, auditLogRepository, accountMapper);
         testAccount = new Account(
                 UUID.randomUUID().toString(),
                 accountNumber,

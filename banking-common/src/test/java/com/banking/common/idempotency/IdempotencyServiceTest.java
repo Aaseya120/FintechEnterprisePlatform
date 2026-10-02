@@ -11,7 +11,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.RedisOperations;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.time.Duration;
@@ -31,22 +31,21 @@ import static org.mockito.Mockito.*;
 class IdempotencyServiceTest {
 
     @Mock
-    private RedisTemplate<String, Object> redisTemplate;
+    private RedisOperations<String, Object> redisTemplate;
 
     @Mock
     private ValueOperations<String, Object> valueOperations;
 
-    @Spy
-    private ObjectMapper objectMapper = new ObjectMapper();
-
-    @InjectMocks
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private IdempotencyService idempotencyService;
 
     private final String testKey = "idemp-test-uuid";
 
     @BeforeEach
     void setUp() {
+        objectMapper.findAndRegisterModules();
         when(redisTemplate.opsForValue()).thenReturn(valueOperations);
+        idempotencyService = new IdempotencyService(redisTemplate, objectMapper);
     }
 
     @Test

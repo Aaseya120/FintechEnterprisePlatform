@@ -280,5 +280,22 @@ services:
       banking-db:
         condition: service_healthy
 
+  bill-payment-service:
+    build:
+      context: .
+      args:
+        MODULE_NAME: bill-payment-service
+    container_name: bill-payment-service
+    ports:
+      - "8091:8091"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://banking-db:5432/banking_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgrespassword
+      KAFKA_BOOTSTRAP_SERVERS: banking-kafka:29092
+    depends_on:
+      banking-db:
+        condition: service_healthy
+
 volumes:
   pgdata:

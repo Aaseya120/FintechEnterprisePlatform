@@ -25,6 +25,7 @@
         <module>reporting-service</module>
         <module>batch-service</module>
         <module>exchange-rate-service</module>
+        <module>bill-payment-service</module>
     </modules>
 
     <properties>

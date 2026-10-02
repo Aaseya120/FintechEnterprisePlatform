@@ -24,7 +24,8 @@ flowchart LR
     Step4 --> Step5["5. Payments & Saga\n(payment-service)"]
     Step5 --> Step6["6. Fraud & Risk\n(fraud-detection)"]
     Step6 --> Step7["7. Notifications\n(notification-service)"]
-    Step7 --> Step8["8. Statements & Recon\n(reporting & batch)"]
+    Step7 --> Step8["8. Bill Payments\n(bill-payment)"]
+    Step8 --> Step9["9. Statements & Recon\n(reporting & batch)"]
 ```
 
 | Step | Service | What You Learn Here | Time to Spend |
@@ -36,7 +37,8 @@ flowchart LR
 | **5** | [**payment-service**](file:///d:/Projects/Resume_Project/payment-service) | Multi-rail transfers (UPI, NEFT, IMPS, Cards, FX), 2-Phase Saga, Outbox | 3 hours |
 | **6** | [**fraud-detection-service**](file:///d:/Projects/Resume_Project/fraud-detection-service) | Velocity rules, sliding-window Redis sorted sets, risk score engine | 1.5 hours |
 | **7** | [**notification-service**](file:///d:/Projects/Resume_Project/notification-service) | Kafka event listeners, multi-channel dispatch (SMS, Email, Push) | 1 hour |
-| **8** | [**reporting-service**](file:///d:/Projects/Resume_Project/reporting-service) & [**batch-service**](file:///d:/Projects/Resume_Project/batch-service) | PDF/Excel/CSV exports, Oracle 19c PL/SQL batching, automated reconciliation | 2 hours |
+| **8** | [**bill-payment-service**](file:///d:/Projects/Resume_Project/bill-payment-service) | Utility & Telecom bill presentment, strategy gateways, settlement | 1 hour |
+| **9** | [**reporting-service**](file:///d:/Projects/Resume_Project/reporting-service) & [**batch-service**](file:///d:/Projects/Resume_Project/batch-service) | PDF/Excel/CSV exports, Oracle 19c PL/SQL batching, automated reconciliation | 2 hours |
 
 ---
 
@@ -999,13 +1001,29 @@ When integrating a native iOS app (Swift / SwiftUI) or Android app (Kotlin / Jet
 
 ---
 
+## 🚶 Step 14: Utility & Telecom Bill Payments (`bill-payment-service`)
+
+Handles real-time bill presentment, inquiry, and settlement with external utility and telecom providers.
+
+### Key Highlights:
+- **Port:** `8091`
+- **SOLID Architecture:** Uses `BillerGateway` strategy pattern (OCP/LSP) for `TELECOM`, `UTILITY`, and `MUNICIPALITY` billers.
+- **Key APIs:**
+  - `GET /api/v1/bills/billers` — List active billers.
+  - `POST /api/v1/bills/inquire` — Fetch real-time bill due amount.
+  - `POST /api/v1/bills/pay` — Settle bills with idempotency protection.
+  - `GET /api/v1/bills/history/{customerId}` — Paged customer bill payment history.
+- **Kafka Events:** Publishes `bill.payment.completed` and `bill.payment.failed`.
+
+---
+
 ## 🏛️ Top 6 Design Patterns to Notice in this Codebase
 
 As a fresher, understanding *why* a pattern is used will accelerate your career:
 
 | Design Pattern | Where It Is Used | Why We Used It Here |
 | :--- | :--- | :--- |
-| **Strategy Pattern** | `PaymentGatewayFactory` & `ExportStrategyFactory` | Allows switching between payment rails (UPI, Card, NEFT) or export formats (PDF, Excel, CSV) without modifying existing code (Open/Closed Principle). |
+| **Strategy Pattern** | `PaymentGatewayFactory` & `BillerGatewayRegistry` | Allows switching between payment rails or billers without modifying existing code (Open/Closed Principle). |
 | **Saga Pattern** | `PaymentSagaOrchestrator` | Solves the distributed transaction problem across multiple microservices without slow, blocking two-phase commits (2PC). |
 | **Transactional Outbox** | `OutboxPublisher` & `outbox_events` table | Guarantees that database updates and Kafka message publishing succeed or fail together atomically. |
 | **Facade Pattern** | `TransactionReportingFacade` & `ReconciliationFacade` | Hides complex subsystems behind a clean, simple 1-line API call for controllers. |
@@ -1037,6 +1055,7 @@ Open your browser and test APIs interactively:
 - **Customer Service**: [http://localhost:8084/swagger-ui.html](http://localhost:8084/swagger-ui.html)
 - **Reporting Service**: [http://localhost:8089/swagger-ui.html](http://localhost:8089/swagger-ui.html)
 - **Batch Service**: [http://localhost:8090/swagger-ui.html](http://localhost:8090/swagger-ui.html)
+- **Bill Payment Service**: [http://localhost:8091/swagger-ui.html](http://localhost:8091/swagger-ui.html)
 
 ---
 

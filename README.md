@@ -28,8 +28,10 @@ graph TD
     APIGW -->|REST| Fraud["Fraud Detection (:8087)<br/>Redis Velocity • Geo-Travel Rules"]
     APIGW -->|REST| Rep["Reporting Service (:8089)<br/>PDF • Excel • CSV Exports"]
     APIGW -->|REST| Batch["Batch Service (:8090)<br/>Spring Batch 5 • Oracle Reconciliation"]
+    APIGW -->|REST| Bill["Bill Payment Service (:8091)<br/>Utility • Telecom • Presentment"]
 
     Pay -->|Outbox Poller| Kafka["Apache Kafka Cluster"]
+    Bill -->|Async Events| Kafka
     Kafka -->|Async Events| Notif["Notification Service (:8088)<br/>SMS • Email • Push"]
 
     Acc --> DB[(PostgreSQL & Oracle 19c)]
@@ -58,6 +60,7 @@ graph TD
 | [**notification-service**](file:///d:/Projects/Resume_Project/notification-service) | `8088` | Omni-channel alerts (SMS, Email, Push FCM/APNS) | Kafka Consumer, Twilio/SendGrid mock |
 | [**reporting-service**](file:///d:/Projects/Resume_Project/reporting-service) | `8089` | Statement export (PDF, Excel, CSV, JSON) and import | OpenPDF, Apache POI 5.3, Strategy Pattern |
 | [**batch-service**](file:///d:/Projects/Resume_Project/batch-service) | `8090` | High-volume clearing ingestion, Oracle PL/SQL, reconciliation | Spring Batch 5, Oracle 19c PL/SQL |
+| [**bill-payment-service**](file:///d:/Projects/Resume_Project/bill-payment-service) | `8091` | Utility & Telecom bill presentment, inquiry, and settlement | Strategy Pattern, Kafka, Flyway, Idempotency |
 | [**banking-common**](file:///d:/Projects/Resume_Project/banking-common) | - | Shared DTOs, AES-GCM crypto, masking util, `@Idempotent` | Reusable Java 21 Enterprise Library |
 
 ---

@@ -87,6 +87,18 @@ spring:
                 redis-rate-limiter.burstCapacity: 60
                 key-resolver: "#{@userOrIpKeyResolver}"
 
+        # Bill Payment Service
+        - id: bill-payment-service
+          uri: ${BILL_PAYMENT_SERVICE_URL:http://localhost:8091}
+          predicates:
+            - Path=/api/v1/bills/**
+          filters:
+            - name: RequestRateLimiter
+              args:
+                redis-rate-limiter.replenishRate: 20
+                redis-rate-limiter.burstCapacity: 40
+                key-resolver: "#{@userOrIpKeyResolver}"
+
         # Fraud Detection Service
         - id: fraud-service
           uri: ${FRAUD_SERVICE_URL:http://localhost:8087}

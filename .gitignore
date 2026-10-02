@@ -1,0 +1,54 @@
+# Compiled class files
+*.class
+*.jar
+*.war
+*.nar
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Maven build directory
+target/
+**/target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# Test and coverage output
+*.exec
+surefire-reports/
+**/surefire-reports/
+jacoco.exec
+**/jacoco.exec
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# IDE / Editor configuration
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*.bak
+*~
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# OS specific files
+.DS_Store
+Thumbs.db
+desktop.ini

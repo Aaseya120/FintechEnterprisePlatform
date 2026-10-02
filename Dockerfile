@@ -17,6 +17,7 @@ COPY fraud-detection-service/pom.xml fraud-detection-service/
 COPY reporting-service/pom.xml reporting-service/
 COPY batch-service/pom.xml batch-service/
 COPY exchange-rate-service/pom.xml exchange-rate-service/
+COPY bill-payment-service/pom.xml bill-payment-service/
 
 # Build offline dependencies
 RUN apk add --no-cache maven && mvn dependency:go-offline -B

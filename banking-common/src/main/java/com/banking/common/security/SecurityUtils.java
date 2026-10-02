@@ -14,6 +14,7 @@ import java.util.stream.Collectors;
  * Extracts authenticated user information (customerId, roles) from the Spring SecurityContext.
  * The SecurityContext is populated by JwtAuthenticationFilter in downstream services.
  */
+@SuppressWarnings("null")
 public final class SecurityUtils {
 
     private SecurityUtils() {}

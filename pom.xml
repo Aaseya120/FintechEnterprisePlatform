@@ -44,6 +44,7 @@
         <lombok.version>1.18.38</lombok.version>
         <micrometer.version>1.13.4</micrometer.version>
         <opentelemetry.version>1.38.0</opentelemetry.version>
+        <argLine></argLine>
     </properties>
 
     <dependencyManagement>

@@ -28,6 +28,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(BankingException.class)
+    @SuppressWarnings("null")
     public ResponseEntity<ErrorResponse> handleBankingException(BankingException ex, HttpServletRequest request) {
         String correlationId = getOrGenerateCorrelationId(request);
         log.warn("Banking business exception occurred [code: {}, path: {}, correlationId: {}]: {}",

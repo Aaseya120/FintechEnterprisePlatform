@@ -18,6 +18,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 @Service
+@SuppressWarnings("null")
 public class IdempotencyService {
 
     private static final Logger log = LoggerFactory.getLogger(IdempotencyService.class);

@@ -1095,6 +1095,21 @@ Automated delivery pipeline defined in [`.github/workflows/ci-cd.yml`](file:///d
 
 ---
 
+## 🌐 Step 17: Top 6 API Architecture Styles in this Banking Platform
+
+Every senior backend engineer must know when to choose which API style:
+
+| API Style | Implementation in Our Codebase | Ideal Real-World Banking Use Case |
+| :--- | :--- | :--- |
+| **1. RESTful** | Standard controllers (`PaymentController`, `AccountController`) | Public web & mobile banking requests, standard CRUD operations. |
+| **2. SOAP** | `AccountSoapEndpoint.java` & `accounts.xsd` | Legacy Core Banking System (CBS/Mainframe) institutional ledger posting. |
+| **3. GraphQL** | `AccountGraphQLController.java` (`@QueryMapping`) | Mobile home screen dashboard (fetches balance, vaults & cards in 1 call). |
+| **4. Webhooks** | `PaymentWebhookController.java` (`X-Webhook-Signature`) | Asynchronous payment rail settlement notifications (PayPal, Stripe, UPI). |
+| **5. WebSockets / SSE**| `ExchangeRateController.java` live ticker | Real-time live currency exchange rate feeds and in-app alert toasts. |
+| **6. gRPC** | Inter-service Protobuf contracts | Sub-millisecond synchronous ledger balance checks during transaction spikes. |
+
+---
+
 ## 🏛️ Top 6 Design Patterns to Notice in this Codebase
 
 As a fresher, understanding *why* a pattern is used will accelerate your career:

@@ -101,6 +101,7 @@ public class AiFraudAdvisorService {
     }
 
     private double calculateAiConfidence(int score) {
+        // High scores and clear low scores yield higher confidence than borderline cases
         if (score >= 80 || score <= 10) return 0.96;
         if (score >= 60 || score <= 20) return 0.88;
         return 0.78;

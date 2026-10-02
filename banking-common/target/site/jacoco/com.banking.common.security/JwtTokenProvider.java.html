@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JwtTokenProvider.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Banking Common Library</a> &gt; <a href="index.source.html" class="el_package">com.banking.common.security</a> &gt; <span class="el_source">JwtTokenProvider.java</span></div><h1>JwtTokenProvider.java</h1><pre class="source lang-java linenums">package com.banking.common.security;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.util.*;
+
+/**
+ * Enterprise JWT Access Token &amp; Refresh Token Provider:
+ * Generates and validates signed HMAC-SHA256 JWT tokens with role, tier, and session claims.
+ */
+@Component
+public class JwtTokenProvider {
+
+<span class="nc" id="L24">    private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);</span>
+<span class="nc" id="L25">    private static final SecureRandom RANDOM = new SecureRandom();</span>
+
+    private final String secretKey;
+    private final long accessTokenValiditySeconds;
+    private final long refreshTokenValidityDays;
+    private final ObjectMapper objectMapper;
+
+    public JwtTokenProvider(
+            @Value(&quot;${banking.security.jwt.secret:EnterpriseBankingSuperSecretKeyMustBeAtLeast256BitsLongForHmacSha256Security2026!}&quot;) String secretKey,
+            @Value(&quot;${banking.security.jwt.access-token-validity-seconds:900}&quot;) long accessTokenValiditySeconds,
+            @Value(&quot;${banking.security.jwt.refresh-token-validity-days:7}&quot;) long refreshTokenValidityDays,
+<span class="nc" id="L36">            ObjectMapper objectMapper) {</span>
+<span class="nc" id="L37">        this.secretKey = secretKey;</span>
+<span class="nc" id="L38">        this.accessTokenValiditySeconds = accessTokenValiditySeconds;</span>
+<span class="nc" id="L39">        this.refreshTokenValidityDays = refreshTokenValidityDays;</span>
+<span class="nc" id="L40">        this.objectMapper = objectMapper;</span>
+<span class="nc" id="L41">    }</span>
+
+    /**
+     * Generates a 15-minute validity signed JWT Access Token.
+     */
+    public String generateAccessToken(String customerId, String customerNumber, String email,
+                                      String tier, List&lt;String&gt; roles) {
+<span class="nc" id="L48">        Instant now = Instant.now();</span>
+<span class="nc" id="L49">        Instant expiry = now.plusSeconds(accessTokenValiditySeconds);</span>
+
+<span class="nc" id="L51">        Map&lt;String, Object&gt; header = Map.of(&quot;alg&quot;, &quot;HS256&quot;, &quot;typ&quot;, &quot;JWT&quot;);</span>
+
+<span class="nc" id="L53">        Map&lt;String, Object&gt; claims = new LinkedHashMap&lt;&gt;();</span>
+<span class="nc" id="L54">        claims.put(&quot;sub&quot;, customerId);</span>
+<span class="nc" id="L55">        claims.put(&quot;customerNumber&quot;, customerNumber);</span>
+<span class="nc" id="L56">        claims.put(&quot;email&quot;, email);</span>
+<span class="nc" id="L57">        claims.put(&quot;tier&quot;, tier);</span>
+<span class="nc" id="L58">        claims.put(&quot;roles&quot;, roles);</span>
+<span class="nc" id="L59">        claims.put(&quot;iat&quot;, now.getEpochSecond());</span>
+<span class="nc" id="L60">        claims.put(&quot;exp&quot;, expiry.getEpochSecond());</span>
+<span class="nc" id="L61">        claims.put(&quot;jti&quot;, UUID.randomUUID().toString());</span>
+
+        try {
+<span class="nc" id="L64">            String encodedHeader = Base64.getUrlEncoder().withoutPadding().encodeToString(objectMapper.writeValueAsBytes(header));</span>
+<span class="nc" id="L65">            String encodedPayload = Base64.getUrlEncoder().withoutPadding().encodeToString(objectMapper.writeValueAsBytes(claims));</span>
+<span class="nc" id="L66">            String dataToSign = encodedHeader + &quot;.&quot; + encodedPayload;</span>
+<span class="nc" id="L67">            String signature = sign(dataToSign);</span>
+<span class="nc" id="L68">            return dataToSign + &quot;.&quot; + signature;</span>
+<span class="nc" id="L69">        } catch (Exception e) {</span>
+<span class="nc" id="L70">            log.error(&quot;Failed to generate JWT access token: {}&quot;, e.getMessage());</span>
+<span class="nc" id="L71">            throw new RuntimeException(&quot;Error signing JWT access token&quot;, e);</span>
+        }
+    }
+
+    /**
+     * Generates a high-entropy opaque Refresh Token.
+     */
+    public String generateRefreshToken() {
+<span class="nc" id="L79">        byte[] bytes = new byte[32];</span>
+<span class="nc" id="L80">        RANDOM.nextBytes(bytes);</span>
+<span class="nc" id="L81">        return &quot;rt_&quot; + HexFormat.of().formatHex(bytes);</span>
+    }
+
+    public long getAccessTokenValiditySeconds() {
+<span class="nc" id="L85">        return accessTokenValiditySeconds;</span>
+    }
+
+    public long getRefreshTokenValidityDays() {
+<span class="nc" id="L89">        return refreshTokenValidityDays;</span>
+    }
+
+    /**
+     * Validates JWT token structure, HMAC signature, and expiration.
+     */
+    public boolean validateToken(String token) {
+        try {
+<span class="nc" id="L97">            String[] parts = token.split(&quot;\\.&quot;);</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            if (parts.length != 3) return false;</span>
+
+<span class="nc" id="L100">            String dataToSign = parts[0] + &quot;.&quot; + parts[1];</span>
+<span class="nc" id="L101">            String expectedSignature = sign(dataToSign);</span>
+<span class="nc bnc" id="L102" title="All 2 branches missed.">            if (!MessageDigest.isEqual(</span>
+<span class="nc" id="L103">                    expectedSignature.getBytes(StandardCharsets.UTF_8),</span>
+<span class="nc" id="L104">                    parts[2].getBytes(StandardCharsets.UTF_8))) {</span>
+<span class="nc" id="L105">                return false;</span>
+            }
+
+            // Check expiration
+<span class="nc" id="L109">            Map&lt;String, Object&gt; claims = getClaims(token);</span>
+<span class="nc" id="L110">            long exp = ((Number) claims.get(&quot;exp&quot;)).longValue();</span>
+<span class="nc bnc" id="L111" title="All 2 branches missed.">            return Instant.now().getEpochSecond() &lt; exp;</span>
+<span class="nc" id="L112">        } catch (Exception e) {</span>
+<span class="nc" id="L113">            return false;</span>
+        }
+    }
+
+    @SuppressWarnings(&quot;unchecked&quot;)
+    public Map&lt;String, Object&gt; getClaims(String token) {
+        try {
+<span class="nc" id="L120">            String[] parts = token.split(&quot;\\.&quot;);</span>
+<span class="nc" id="L121">            byte[] decodedBytes = Base64.getUrlDecoder().decode(parts[1]);</span>
+<span class="nc" id="L122">            return objectMapper.readValue(decodedBytes, Map.class);</span>
+<span class="nc" id="L123">        } catch (Exception e) {</span>
+<span class="nc" id="L124">            throw new RuntimeException(&quot;Invalid JWT token format&quot;, e);</span>
+        }
+    }
+
+    public String getSubject(String token) {
+<span class="nc" id="L129">        return (String) getClaims(token).get(&quot;sub&quot;);</span>
+    }
+
+    public String getCustomerTier(String token) {
+<span class="nc" id="L133">        return (String) getClaims(token).get(&quot;tier&quot;);</span>
+    }
+
+    private String sign(String data) throws Exception {
+<span class="nc" id="L137">        Mac hmac = Mac.getInstance(&quot;HmacSHA256&quot;);</span>
+<span class="nc" id="L138">        SecretKeySpec secretKeySpec = new SecretKeySpec(secretKey.getBytes(StandardCharsets.UTF_8), &quot;HmacSHA256&quot;);</span>
+<span class="nc" id="L139">        hmac.init(secretKeySpec);</span>
+<span class="nc" id="L140">        byte[] signedBytes = hmac.doFinal(data.getBytes(StandardCharsets.UTF_8));</span>
+<span class="nc" id="L141">        return Base64.getUrlEncoder().withoutPadding().encodeToString(signedBytes);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

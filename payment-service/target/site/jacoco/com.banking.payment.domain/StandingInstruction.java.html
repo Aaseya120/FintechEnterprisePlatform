@@ -1,0 +1,110 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StandingInstruction.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Payment Microservice</a> &gt; <a href="index.source.html" class="el_package">com.banking.payment.domain</a> &gt; <span class="el_source">StandingInstruction.java</span></div><h1>StandingInstruction.java</h1><pre class="source lang-java linenums">package com.banking.payment.domain;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+
+@Entity
+@Table(
+    name = &quot;standing_instructions&quot;,
+    indexes = {
+        @Index(name = &quot;idx_si_customer&quot;, columnList = &quot;customer_id, status&quot;),
+        @Index(name = &quot;idx_si_next_exec&quot;, columnList = &quot;next_execution_date, status&quot;)
+    }
+)
+@Getter
+@Setter
+@NoArgsConstructor
+public class StandingInstruction {
+
+    @Id
+    @Column(name = &quot;id&quot;, length = 36, nullable = false)
+    private String id;
+
+    @Column(name = &quot;instruction_name&quot;, length = 100, nullable = false)
+    private String instructionName;
+
+    @Column(name = &quot;customer_id&quot;, length = 36, nullable = false)
+    private String customerId;
+
+    @Column(name = &quot;source_account_number&quot;, length = 34, nullable = false)
+    private String sourceAccountNumber;
+
+    @Column(name = &quot;target_account_number&quot;, length = 34, nullable = false)
+    private String targetAccountNumber;
+
+    @Column(name = &quot;amount&quot;, precision = 19, scale = 4, nullable = false)
+    private BigDecimal amount;
+
+    @Column(name = &quot;currency&quot;, length = 3, nullable = false)
+    private String currency;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;frequency&quot;, length = 20, nullable = false)
+    private ScheduleFrequency frequency;
+
+    @Column(name = &quot;execution_day&quot;)
+    private Integer executionDay; // Day of month (1-28)
+
+    @Column(name = &quot;next_execution_date&quot;, nullable = false)
+    private LocalDate nextExecutionDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;category&quot;, length = 30, nullable = false)
+    private PaymentCategory category;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;status&quot;, length = 20, nullable = false)
+    private InstructionStatus status;
+
+    @Column(name = &quot;total_executions_count&quot;, nullable = false)
+    private int totalExecutionsCount;
+
+    @Column(name = &quot;last_executed_at&quot;)
+    private Instant lastExecutedAt;
+
+    @Column(name = &quot;created_at&quot;, nullable = false, updatable = false)
+    private Instant createdAt;
+
+<span class="nc" id="L74">    public enum ScheduleFrequency { DAILY, WEEKLY, MONTHLY, QUARTERLY, ANNUALLY }</span>
+<span class="nc" id="L75">    public enum PaymentCategory { UTILITY_BILL, RENT, LOAN_EMI, SAVINGS_SWEEP, SUBSCRIPTION, TAX }</span>
+<span class="nc" id="L76">    public enum InstructionStatus { ACTIVE, PAUSED, CANCELLED, COMPLETED }</span>
+
+    public StandingInstruction(String id, String instructionName, String customerId,
+                               String sourceAccountNumber, String targetAccountNumber,
+                               BigDecimal amount, String currency, ScheduleFrequency frequency,
+<span class="nc" id="L81">                               Integer executionDay, LocalDate startDate, PaymentCategory category) {</span>
+<span class="nc" id="L82">        this.id = id;</span>
+<span class="nc" id="L83">        this.instructionName = instructionName;</span>
+<span class="nc" id="L84">        this.customerId = customerId;</span>
+<span class="nc" id="L85">        this.sourceAccountNumber = sourceAccountNumber;</span>
+<span class="nc" id="L86">        this.targetAccountNumber = targetAccountNumber;</span>
+<span class="nc" id="L87">        this.amount = amount;</span>
+<span class="nc" id="L88">        this.currency = currency.toUpperCase();</span>
+<span class="nc" id="L89">        this.frequency = frequency;</span>
+<span class="nc bnc" id="L90" title="All 2 branches missed.">        this.executionDay = executionDay != null ? executionDay : 1;</span>
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        this.nextExecutionDate = startDate != null ? startDate : LocalDate.now();</span>
+<span class="nc" id="L92">        this.category = category;</span>
+<span class="nc" id="L93">        this.status = InstructionStatus.ACTIVE;</span>
+<span class="nc" id="L94">        this.totalExecutionsCount = 0;</span>
+<span class="nc" id="L95">        this.createdAt = Instant.now();</span>
+<span class="nc" id="L96">    }</span>
+
+    public void advanceExecutionDate() {
+<span class="nc" id="L99">        this.totalExecutionsCount++;</span>
+<span class="nc" id="L100">        this.lastExecutedAt = Instant.now();</span>
+<span class="nc bnc" id="L101" title="All 5 branches missed.">        this.nextExecutionDate = switch (this.frequency) {</span>
+<span class="nc" id="L102">            case DAILY -&gt; this.nextExecutionDate.plusDays(1);</span>
+<span class="nc" id="L103">            case WEEKLY -&gt; this.nextExecutionDate.plusWeeks(1);</span>
+<span class="nc" id="L104">            case MONTHLY -&gt; this.nextExecutionDate.plusMonths(1);</span>
+<span class="nc" id="L105">            case QUARTERLY -&gt; this.nextExecutionDate.plusMonths(3);</span>
+<span class="nc" id="L106">            case ANNUALLY -&gt; this.nextExecutionDate.plusYears(1);</span>
+        };
+<span class="nc" id="L108">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

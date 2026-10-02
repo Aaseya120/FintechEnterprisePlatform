@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TermDepositService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Account Microservice</a> &gt; <a href="index.source.html" class="el_package">com.banking.account.service</a> &gt; <span class="el_source">TermDepositService.java</span></div><h1>TermDepositService.java</h1><pre class="source lang-java linenums">package com.banking.account.service;
+
+import com.banking.account.domain.Account;
+import com.banking.account.domain.TermDeposit;
+import com.banking.account.dto.TermDepositDtos.*;
+import com.banking.account.repository.AccountRepository;
+import com.banking.account.repository.TermDepositRepository;
+import com.banking.common.exception.BankingException;
+import com.banking.common.exception.ResourceNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+public class TermDepositService {
+
+<span class="nc" id="L26">    private static final Logger log = LoggerFactory.getLogger(TermDepositService.class);</span>
+<span class="nc" id="L27">    private static final SecureRandom RANDOM = new SecureRandom();</span>
+
+    private final TermDepositRepository termDepositRepository;
+    private final AccountRepository accountRepository;
+    private final AccountService accountService;
+
+    public TermDepositService(TermDepositRepository termDepositRepository,
+                              AccountRepository accountRepository,
+<span class="nc" id="L35">                              AccountService accountService) {</span>
+<span class="nc" id="L36">        this.termDepositRepository = termDepositRepository;</span>
+<span class="nc" id="L37">        this.accountRepository = accountRepository;</span>
+<span class="nc" id="L38">        this.accountService = accountService;</span>
+<span class="nc" id="L39">    }</span>
+
+    @Transactional
+    public TermDepositResponse openTermDeposit(OpenTermDepositRequest request) {
+<span class="nc" id="L43">        Account linkedAccount = accountRepository.findByAccountNumber(request.linkedAccountNumber())</span>
+<span class="nc" id="L44">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Linked Account&quot;, request.linkedAccountNumber()));</span>
+
+<span class="nc bnc" id="L46" title="All 2 branches missed.">        if (linkedAccount.getAvailableBalance().compareTo(request.principalAmount()) &lt; 0) {</span>
+<span class="nc" id="L47">            throw new BankingException(&quot;INSUFFICIENT_FUNDS&quot;, &quot;Insufficient balance in linked account to fund Term Deposit&quot;, HttpStatus.BAD_REQUEST);</span>
+        }
+
+        // Debit linked checking/savings account
+<span class="nc" id="L51">        accountService.debitAccount(request.linkedAccountNumber(), request.principalAmount(),</span>
+<span class="nc" id="L52">                UUID.randomUUID().toString(), &quot;TERM_DEPOSIT_CREATION&quot;);</span>
+
+        // Determine interest rate based on tenor
+<span class="nc" id="L55">        BigDecimal interestRate = getInterestRateForTenor(request.tenorMonths());</span>
+<span class="nc" id="L56">        String depositNumber = &quot;FD-&quot; + (10000000 + RANDOM.nextInt(90000000));</span>
+
+<span class="nc" id="L58">        TermDeposit td = new TermDeposit(</span>
+<span class="nc" id="L59">                UUID.randomUUID().toString(),</span>
+                depositNumber,
+<span class="nc" id="L61">                request.customerId(),</span>
+<span class="nc" id="L62">                request.linkedAccountNumber(),</span>
+<span class="nc" id="L63">                request.principalAmount(),</span>
+<span class="nc" id="L64">                request.currency(),</span>
+                interestRate,
+<span class="nc" id="L66">                request.tenorMonths(),</span>
+<span class="nc bnc" id="L67" title="All 2 branches missed.">                request.compoundingFrequency() != null ? request.compoundingFrequency() : TermDeposit.CompoundingFrequency.QUARTERLY,</span>
+<span class="nc" id="L68">                request.autoRenewal()</span>
+        );
+
+<span class="nc" id="L71">        TermDeposit saved = termDepositRepository.save(td);</span>
+<span class="nc" id="L72">        log.info(&quot;Opened new Term Deposit {} for customer {} - Principal: {}, Maturity: {}&quot;,</span>
+<span class="nc" id="L73">                depositNumber, request.customerId(), request.principalAmount(), saved.getMaturityAmount());</span>
+
+<span class="nc" id="L75">        return mapToDto(saved);</span>
+    }
+
+    @Transactional
+    public TermDepositLiquidationResponse liquidateDeposit(String depositNumber) {
+<span class="nc" id="L80">        TermDeposit td = termDepositRepository.findByDepositNumber(depositNumber)</span>
+<span class="nc" id="L81">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Term Deposit&quot;, depositNumber));</span>
+
+<span class="nc bnc" id="L83" title="All 2 branches missed.">        if (td.getStatus() != TermDeposit.TermDepositStatus.ACTIVE) {</span>
+<span class="nc" id="L84">            throw new BankingException(&quot;ALREADY_CLOSED&quot;, &quot;Term Deposit is not active&quot;, HttpStatus.CONFLICT);</span>
+        }
+
+        // Premature liquidation calculation: 1% penalty deducted from interest
+<span class="nc" id="L88">        BigDecimal penalty = td.getPrincipalAmount().multiply(new BigDecimal(&quot;0.01&quot;)).setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L89">        BigDecimal interestAccrued = td.getPrincipalAmount().multiply(td.getInterestRate()).multiply(new BigDecimal(&quot;0.25&quot;)).setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L90">        BigDecimal netPayout = td.getPrincipalAmount().add(interestAccrued).subtract(penalty);</span>
+
+<span class="nc" id="L92">        td.setStatus(TermDeposit.TermDepositStatus.PREMATURE_CLOSED);</span>
+<span class="nc" id="L93">        termDepositRepository.save(td);</span>
+
+        // Credit proceeds back to linked checking/savings account
+<span class="nc" id="L96">        accountService.creditAccount(td.getLinkedAccountNumber(), netPayout,</span>
+<span class="nc" id="L97">                UUID.randomUUID().toString(), &quot;TERM_DEPOSIT_LIQUIDATION&quot;);</span>
+
+<span class="nc" id="L99">        log.info(&quot;Liquidated Term Deposit {} - Net Payout {} returned to {}&quot;,</span>
+<span class="nc" id="L100">                depositNumber, netPayout, td.getLinkedAccountNumber());</span>
+
+<span class="nc" id="L102">        return new TermDepositLiquidationResponse(</span>
+                depositNumber,
+<span class="nc" id="L104">                td.getPrincipalAmount(),</span>
+                interestAccrued,
+                penalty,
+                netPayout,
+<span class="nc" id="L108">                td.getLinkedAccountNumber(),</span>
+<span class="nc" id="L109">                Instant.now()</span>
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;TermDepositResponse&gt; getCustomerDeposits(String customerId) {
+<span class="nc" id="L115">        return termDepositRepository.findByCustomerIdOrderByCreatedAtDesc(customerId)</span>
+<span class="nc" id="L116">                .stream()</span>
+<span class="nc" id="L117">                .map(this::mapToDto)</span>
+<span class="nc" id="L118">                .toList();</span>
+    }
+
+    private BigDecimal getInterestRateForTenor(int months) {
+<span class="nc bnc" id="L122" title="All 2 branches missed.">        if (months &lt; 6) return new BigDecimal(&quot;0.0550&quot;); // 5.50%</span>
+<span class="nc bnc" id="L123" title="All 2 branches missed.">        if (months &lt; 12) return new BigDecimal(&quot;0.0650&quot;); // 6.50%</span>
+<span class="nc bnc" id="L124" title="All 2 branches missed.">        if (months &lt; 36) return new BigDecimal(&quot;0.0725&quot;); // 7.25%</span>
+<span class="nc" id="L125">        return new BigDecimal(&quot;0.0775&quot;); // 7.75% for 3+ years</span>
+    }
+
+    private TermDepositResponse mapToDto(TermDeposit td) {
+<span class="nc" id="L129">        return new TermDepositResponse(</span>
+<span class="nc" id="L130">                td.getId(),</span>
+<span class="nc" id="L131">                td.getDepositNumber(),</span>
+<span class="nc" id="L132">                td.getCustomerId(),</span>
+<span class="nc" id="L133">                td.getLinkedAccountNumber(),</span>
+<span class="nc" id="L134">                td.getPrincipalAmount(),</span>
+<span class="nc" id="L135">                td.getCurrency(),</span>
+<span class="nc" id="L136">                td.getInterestRate(),</span>
+<span class="nc" id="L137">                td.getTenorMonths(),</span>
+<span class="nc" id="L138">                td.getCompoundingFrequency(),</span>
+<span class="nc" id="L139">                td.getMaturityAmount(),</span>
+<span class="nc" id="L140">                td.getMaturityDate(),</span>
+<span class="nc" id="L141">                td.getStatus(),</span>
+<span class="nc" id="L142">                td.isAutoRenewal(),</span>
+<span class="nc" id="L143">                td.getCreatedAt()</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

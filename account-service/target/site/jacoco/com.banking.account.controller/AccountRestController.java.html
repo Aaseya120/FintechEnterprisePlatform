@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AccountRestController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Account Microservice</a> &gt; <a href="index.source.html" class="el_package">com.banking.account.controller</a> &gt; <span class="el_source">AccountRestController.java</span></div><h1>AccountRestController.java</h1><pre class="source lang-java linenums">package com.banking.account.controller;
+
+import com.banking.account.dto.AccountResponseDto;
+import com.banking.account.dto.CreateAccountRequest;
+import com.banking.account.dto.TermDepositDtos.*;
+import com.banking.account.service.AccountService;
+import com.banking.account.service.TermDepositService;
+import com.banking.common.dto.ApiResponse;
+import com.banking.common.security.BankingRoles;
+import com.banking.common.security.SecurityUtils;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+/**
+ * REST controller for core banking accounts, balance inquiries, and term deposits.
+ */
+@RestController
+@RequestMapping(&quot;/api/v1/accounts&quot;)
+public class AccountRestController {
+
+    private final AccountService accountService;
+    private final TermDepositService termDepositService;
+
+<span class="nc" id="L32">    public AccountRestController(AccountService accountService, TermDepositService termDepositService) {</span>
+<span class="nc" id="L33">        this.accountService = accountService;</span>
+<span class="nc" id="L34">        this.termDepositService = termDepositService;</span>
+<span class="nc" id="L35">    }</span>
+
+    /**
+     * Opens a new core banking account for a customer.
+     */
+    @PostMapping
+    @PreAuthorize(&quot;hasAnyRole('&quot; + BankingRoles.ROLE_CUSTOMER + &quot;', '&quot; + BankingRoles.ROLE_TELLER + &quot;', '&quot; + BankingRoles.ROLE_ADMIN + &quot;')&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;AccountResponseDto&gt;&gt; createAccount(
+            @Valid @RequestBody CreateAccountRequest request,
+            @RequestHeader(value = &quot;X-Correlation-ID&quot;, required = false) String correlationId,
+            @RequestHeader(value = &quot;X-Channel&quot;, required = false, defaultValue = &quot;WEB&quot;) String channel) {
+<span class="nc bnc" id="L46" title="All 2 branches missed.">        String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();</span>
+<span class="nc" id="L47">        AccountResponseDto created = accountService.createAccount(request);</span>
+<span class="nc" id="L48">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L49">                .body(ApiResponse.success(created, &quot;Account successfully opened&quot;, corrId));</span>
+    }
+
+    /**
+     * Retrieves account metadata and balance by account number.
+     */
+    @GetMapping(&quot;/{accountNumber}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('&quot; + BankingRoles.ROLE_CUSTOMER + &quot;', '&quot; + BankingRoles.ROLE_TELLER + &quot;', '&quot; + BankingRoles.ROLE_ADMIN + &quot;')&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;AccountResponseDto&gt;&gt; getAccount(
+            @PathVariable String accountNumber,
+            @RequestHeader(value = &quot;X-Correlation-ID&quot;, required = false) String correlationId) {
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();</span>
+<span class="nc" id="L61">        AccountResponseDto account = accountService.getAccountByNumber(accountNumber);</span>
+<span class="nc" id="L62">        return ResponseEntity.ok(ApiResponse.success(account, corrId));</span>
+    }
+
+    /**
+     * Ultra-low latency available balance inquiry.
+     */
+    @GetMapping(&quot;/{accountNumber}/balance&quot;)
+    @PreAuthorize(&quot;hasAnyRole('&quot; + BankingRoles.ROLE_CUSTOMER + &quot;', '&quot; + BankingRoles.ROLE_TELLER + &quot;', '&quot; + BankingRoles.ROLE_ADMIN + &quot;')&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;Map&lt;String, Object&gt;&gt;&gt; getBalance(
+            @PathVariable String accountNumber,
+            @RequestHeader(value = &quot;X-Correlation-ID&quot;, required = false) String correlationId) {
+<span class="nc bnc" id="L73" title="All 2 branches missed.">        String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();</span>
+<span class="nc" id="L74">        BigDecimal balance = accountService.getAvailableBalance(accountNumber);</span>
+<span class="nc" id="L75">        Map&lt;String, Object&gt; data = Map.of(&quot;accountNumber&quot;, accountNumber, &quot;availableBalance&quot;, balance);</span>
+<span class="nc" id="L76">        return ResponseEntity.ok(ApiResponse.success(data, corrId));</span>
+    }
+
+    /**
+     * Lists all accounts owned by a customer.
+     */
+    @GetMapping(&quot;/customer/{customerId}&quot;)
+    @PreAuthorize(&quot;hasAnyRole('&quot; + BankingRoles.ROLE_CUSTOMER + &quot;', '&quot; + BankingRoles.ROLE_TELLER + &quot;', '&quot; + BankingRoles.ROLE_ADMIN + &quot;')&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;AccountResponseDto&gt;&gt;&gt; getCustomerAccounts(
+            @PathVariable String customerId,
+            @RequestHeader(value = &quot;X-Correlation-ID&quot;, required = false) String correlationId) {
+<span class="nc bnc" id="L87" title="All 2 branches missed.">        String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();</span>
+<span class="nc" id="L88">        List&lt;AccountResponseDto&gt; accounts = accountService.getAccountsByCustomer(customerId);</span>
+<span class="nc" id="L89">        return ResponseEntity.ok(ApiResponse.success(accounts, corrId));</span>
+    }
+
+    /**
+     * Internal debit operation with pessimistic ledger locking.
+     */
+    @PostMapping(&quot;/{accountNumber}/debit&quot;)
+    @PreAuthorize(&quot;hasAnyRole('&quot; + BankingRoles.ROLE_TELLER + &quot;', '&quot; + BankingRoles.ROLE_ADMIN + &quot;')&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;AccountResponseDto&gt;&gt; debit(
+            @PathVariable String accountNumber,
+            @RequestBody Map&lt;String, BigDecimal&gt; payload,
+            @RequestHeader(value = &quot;X-Correlation-ID&quot;, required = false) String correlationId) {
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();</span>
+<span class="nc" id="L102">        BigDecimal amount = payload.get(&quot;amount&quot;);</span>
+<span class="nc" id="L103">        String actorId = SecurityUtils.getCurrentUserId().orElse(&quot;SYSTEM&quot;);</span>
+<span class="nc" id="L104">        AccountResponseDto updated = accountService.debitAccount(accountNumber, amount, corrId, actorId);</span>
+<span class="nc" id="L105">        return ResponseEntity.ok(ApiResponse.success(updated, &quot;Account debited successfully&quot;, corrId));</span>
+    }
+
+    /**
+     * Internal credit operation with pessimistic ledger locking.
+     */
+    @PostMapping(&quot;/{accountNumber}/credit&quot;)
+    @PreAuthorize(&quot;hasAnyRole('&quot; + BankingRoles.ROLE_TELLER + &quot;', '&quot; + BankingRoles.ROLE_ADMIN + &quot;')&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;AccountResponseDto&gt;&gt; credit(
+            @PathVariable String accountNumber,
+            @RequestBody Map&lt;String, BigDecimal&gt; payload,
+            @RequestHeader(value = &quot;X-Correlation-ID&quot;, required = false) String correlationId) {
+<span class="nc bnc" id="L117" title="All 2 branches missed.">        String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();</span>
+<span class="nc" id="L118">        BigDecimal amount = payload.get(&quot;amount&quot;);</span>
+<span class="nc" id="L119">        String actorId = SecurityUtils.getCurrentUserId().orElse(&quot;SYSTEM&quot;);</span>
+<span class="nc" id="L120">        AccountResponseDto updated = accountService.creditAccount(accountNumber, amount, corrId, actorId);</span>
+<span class="nc" id="L121">        return ResponseEntity.ok(ApiResponse.success(updated, &quot;Account credited successfully&quot;, corrId));</span>
+    }
+
+    /**
+     * Opens a fixed/term deposit with compound interest calculation.
+     */
+    @PostMapping(&quot;/term-deposits&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;TermDepositResponse&gt;&gt; openTermDeposit(
+            @Valid @RequestBody OpenTermDepositRequest request,
+            @RequestHeader(value = &quot;X-Correlation-ID&quot;, required = false) String correlationId) {
+<span class="nc bnc" id="L131" title="All 2 branches missed.">        String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();</span>
+<span class="nc" id="L132">        TermDepositResponse response = termDepositService.openTermDeposit(request);</span>
+<span class="nc" id="L133">        return ResponseEntity.status(HttpStatus.CREATED)</span>
+<span class="nc" id="L134">                .body(ApiResponse.success(response, &quot;Term Deposit opened successfully&quot;, corrId));</span>
+    }
+
+    /**
+     * Lists term deposits for a customer.
+     */
+    @GetMapping(&quot;/term-deposits/customer/{customerId}&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;List&lt;TermDepositResponse&gt;&gt;&gt; getCustomerDeposits(
+            @PathVariable String customerId,
+            @RequestHeader(value = &quot;X-Correlation-ID&quot;, required = false) String correlationId) {
+<span class="nc bnc" id="L144" title="All 2 branches missed.">        String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();</span>
+<span class="nc" id="L145">        List&lt;TermDepositResponse&gt; list = termDepositService.getCustomerDeposits(customerId);</span>
+<span class="nc" id="L146">        return ResponseEntity.ok(ApiResponse.success(list, corrId));</span>
+    }
+
+    /**
+     * Prematurely liquidates a term deposit with penalty deduction.
+     */
+    @PostMapping(&quot;/term-deposits/{depositNumber}/liquidate&quot;)
+    public ResponseEntity&lt;ApiResponse&lt;TermDepositLiquidationResponse&gt;&gt; liquidateDeposit(
+            @PathVariable String depositNumber,
+            @RequestHeader(value = &quot;X-Correlation-ID&quot;, required = false) String correlationId) {
+<span class="nc bnc" id="L156" title="All 2 branches missed.">        String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();</span>
+<span class="nc" id="L157">        TermDepositLiquidationResponse response = termDepositService.liquidateDeposit(depositNumber);</span>
+<span class="nc" id="L158">        return ResponseEntity.ok(ApiResponse.success(response, &quot;Term deposit liquidated successfully&quot;, corrId));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

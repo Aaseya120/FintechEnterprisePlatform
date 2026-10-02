@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AccountClient.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Payment Microservice</a> &gt; <a href="index.source.html" class="el_package">com.banking.payment.client</a> &gt; <span class="el_source">AccountClient.java</span></div><h1>AccountClient.java</h1><pre class="source lang-java linenums">package com.banking.payment.client;
+
+import com.banking.common.exception.BankingException;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
+import io.github.resilience4j.timelimiter.annotation.TimeLimiter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestTemplate;
+
+import java.math.BigDecimal;
+import java.time.Duration;
+import java.util.Map;
+
+@Component
+public class AccountClient {
+
+<span class="fc" id="L25">    private static final Logger log = LoggerFactory.getLogger(AccountClient.class);</span>
+    private final RestTemplate restTemplate;
+    private final String accountServiceUrl;
+
+    public AccountClient(RestTemplateBuilder builder,
+<span class="nc" id="L30">                         @Value(&quot;${account.service.url:http://localhost:8081}&quot;) String accountServiceUrl) {</span>
+<span class="nc" id="L31">        this.restTemplate = builder</span>
+<span class="nc" id="L32">                .setConnectTimeout(Duration.ofMillis(2000))</span>
+<span class="nc" id="L33">                .setReadTimeout(Duration.ofMillis(3000))</span>
+<span class="nc" id="L34">                .build();</span>
+<span class="nc" id="L35">        this.accountServiceUrl = accountServiceUrl;</span>
+<span class="nc" id="L36">    }</span>
+
+    @CircuitBreaker(name = &quot;accountService&quot;, fallbackMethod = &quot;debitFallback&quot;)
+    @Retry(name = &quot;accountService&quot;)
+    public boolean debit(String accountNumber, BigDecimal amount, String correlationId) {
+<span class="nc" id="L41">        log.info(&quot;Calling AccountService DEBIT for {} amount: {} [corr: {}]&quot;, accountNumber, amount, correlationId);</span>
+<span class="nc" id="L42">        String url = accountServiceUrl + &quot;/api/v1/accounts/&quot; + accountNumber + &quot;/debit&quot;;</span>
+
+<span class="nc" id="L44">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L45">        headers.setContentType(MediaType.APPLICATION_JSON);</span>
+<span class="nc" id="L46">        headers.set(&quot;X-Correlation-ID&quot;, correlationId);</span>
+
+<span class="nc" id="L48">        HttpEntity&lt;Map&lt;String, BigDecimal&gt;&gt; request = new HttpEntity&lt;&gt;(Map.of(&quot;amount&quot;, amount), headers);</span>
+<span class="nc" id="L49">        restTemplate.postForEntity(url, request, String.class);</span>
+<span class="nc" id="L50">        return true;</span>
+    }
+
+    @CircuitBreaker(name = &quot;accountService&quot;, fallbackMethod = &quot;creditFallback&quot;)
+    @Retry(name = &quot;accountService&quot;)
+    public boolean credit(String accountNumber, BigDecimal amount, String correlationId) {
+<span class="nc" id="L56">        log.info(&quot;Calling AccountService CREDIT for {} amount: {} [corr: {}]&quot;, accountNumber, amount, correlationId);</span>
+<span class="nc" id="L57">        String url = accountServiceUrl + &quot;/api/v1/accounts/&quot; + accountNumber + &quot;/credit&quot;;</span>
+
+<span class="nc" id="L59">        HttpHeaders headers = new HttpHeaders();</span>
+<span class="nc" id="L60">        headers.setContentType(MediaType.APPLICATION_JSON);</span>
+<span class="nc" id="L61">        headers.set(&quot;X-Correlation-ID&quot;, correlationId);</span>
+
+<span class="nc" id="L63">        HttpEntity&lt;Map&lt;String, BigDecimal&gt;&gt; request = new HttpEntity&lt;&gt;(Map.of(&quot;amount&quot;, amount), headers);</span>
+<span class="nc" id="L64">        restTemplate.postForEntity(url, request, String.class);</span>
+<span class="nc" id="L65">        return true;</span>
+    }
+
+    // Fallback handlers to isolate downstream failures and prevent cascading collapse
+    public boolean debitFallback(String accountNumber, BigDecimal amount, String correlationId, Throwable t) {
+<span class="nc" id="L70">        log.error(&quot;Resilience4j Fallback triggered on DEBIT for account {}! Cause: {}&quot;, accountNumber, t.getMessage());</span>
+<span class="nc" id="L71">        throw new BankingException(&quot;ACCOUNT_SERVICE_UNAVAILABLE&quot;,</span>
+                &quot;Account microservice is currently unreachable. Transaction halted by circuit breaker.&quot;,
+                HttpStatus.SERVICE_UNAVAILABLE, t);
+    }
+
+    public boolean creditFallback(String accountNumber, BigDecimal amount, String correlationId, Throwable t) {
+<span class="nc" id="L77">        log.error(&quot;Resilience4j Fallback triggered on CREDIT for account {}! Cause: {}&quot;, accountNumber, t.getMessage());</span>
+<span class="nc" id="L78">        throw new BankingException(&quot;ACCOUNT_SERVICE_UNAVAILABLE&quot;,</span>
+                &quot;Account microservice credit failed. Initiating Saga compensation.&quot;,
+                HttpStatus.SERVICE_UNAVAILABLE, t);
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

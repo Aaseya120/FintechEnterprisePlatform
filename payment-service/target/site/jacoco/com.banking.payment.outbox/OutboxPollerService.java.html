@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>OutboxPollerService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Payment Microservice</a> &gt; <a href="index.source.html" class="el_package">com.banking.payment.outbox</a> &gt; <span class="el_source">OutboxPollerService.java</span></div><h1>OutboxPollerService.java</h1><pre class="source lang-java linenums">package com.banking.payment.outbox;
+
+import com.banking.payment.domain.OutboxEventEntity;
+import com.banking.payment.kafka.PaymentEventProducer;
+import com.banking.payment.repository.OutboxEventRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+@Service
+public class OutboxPollerService {
+
+<span class="nc" id="L18">    private static final Logger log = LoggerFactory.getLogger(OutboxPollerService.class);</span>
+
+    private final OutboxEventRepository outboxEventRepository;
+    private final PaymentEventProducer eventProducer;
+
+<span class="nc" id="L23">    public OutboxPollerService(OutboxEventRepository outboxEventRepository, PaymentEventProducer eventProducer) {</span>
+<span class="nc" id="L24">        this.outboxEventRepository = outboxEventRepository;</span>
+<span class="nc" id="L25">        this.eventProducer = eventProducer;</span>
+<span class="nc" id="L26">    }</span>
+
+    /**
+     * Polls unpublished outbox messages from Oracle/Postgres DB and reliably forwards to Kafka.
+     * Prevents dual-write inconsistencies and supports event-driven Saga consistency.
+     */
+    @Scheduled(fixedDelay = 500)
+    @Transactional
+    public void processOutboxEvents() {
+<span class="nc" id="L35">        List&lt;OutboxEventEntity&gt; pendingEvents = outboxEventRepository.findPendingEvents(PageRequest.of(0, 50));</span>
+<span class="nc bnc" id="L36" title="All 2 branches missed.">        if (pendingEvents.isEmpty()) {</span>
+<span class="nc" id="L37">            return;</span>
+        }
+
+<span class="nc" id="L40">        log.debug(&quot;Found {} pending Outbox events to relay to Kafka&quot;, pendingEvents.size());</span>
+
+<span class="nc bnc" id="L42" title="All 2 branches missed.">        for (OutboxEventEntity event : pendingEvents) {</span>
+            try {
+<span class="nc" id="L44">                eventProducer.publish(event.getTopic(), event.getAggregateId(), event.getPayload(), event.getId())</span>
+<span class="nc" id="L45">                        .get(); // Synchronously wait for Kafka broker ACK before marking DB row</span>
+
+<span class="nc" id="L47">                event.markPublished();</span>
+<span class="nc" id="L48">                outboxEventRepository.save(event);</span>
+<span class="nc" id="L49">                log.info(&quot;Relayed Outbox event {} to topic {}&quot;, event.getId(), event.getTopic());</span>
+<span class="nc" id="L50">            } catch (Exception e) {</span>
+<span class="nc" id="L51">                log.error(&quot;Outbox relay failed for event {}: {}&quot;, event.getId(), e.getMessage());</span>
+<span class="nc" id="L52">                event.incrementRetry();</span>
+<span class="nc" id="L53">                outboxEventRepository.save(event);</span>
+                // Break early on persistent Kafka connectivity issues to avoid spamming
+<span class="nc" id="L55">                break;</span>
+<span class="nc" id="L56">            }</span>
+<span class="nc" id="L57">        }</span>
+<span class="nc" id="L58">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

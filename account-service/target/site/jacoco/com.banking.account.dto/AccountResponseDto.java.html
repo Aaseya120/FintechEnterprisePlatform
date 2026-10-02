@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AccountResponseDto.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Account Microservice</a> &gt; <a href="index.source.html" class="el_package">com.banking.account.dto</a> &gt; <span class="el_source">AccountResponseDto.java</span></div><h1>AccountResponseDto.java</h1><pre class="source lang-java linenums">package com.banking.account.dto;
+
+import com.banking.account.domain.AccountStatus;
+import com.banking.account.domain.AccountType;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.time.Instant;
+
+@Schema(description = &quot;Account details model&quot;)
+<span class="fc" id="L12">public record AccountResponseDto(</span>
+        @Schema(description = &quot;Internal unique UUID&quot;, example = &quot;a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d&quot;)
+        String id,
+
+        @Schema(description = &quot;IBAN / Core Banking Account Number&quot;, example = &quot;US12BANK00000123456789&quot;)
+        String accountNumber,
+
+        @Schema(description = &quot;Customer ID&quot;, example = &quot;cust_987654&quot;)
+        String customerId,
+
+        @Schema(description = &quot;Account Type&quot;, example = &quot;CHECKING&quot;)
+        AccountType accountType,
+
+        @Schema(description = &quot;ISO 4217 Currency&quot;, example = &quot;USD&quot;)
+        String currency,
+
+        @Schema(description = &quot;Ledger Balance&quot;, example = &quot;12500.50&quot;)
+        BigDecimal balance,
+
+        @Schema(description = &quot;Available Balance for immediate withdrawal/transfer&quot;, example = &quot;12500.50&quot;)
+        BigDecimal availableBalance,
+
+        @Schema(description = &quot;Account Status&quot;, example = &quot;ACTIVE&quot;)
+        AccountStatus status,
+
+        @Schema(description = &quot;Entity version for optimistic locking&quot;)
+        Long version,
+
+        Instant createdAt,
+        Instant updatedAt
+) implements Serializable {}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

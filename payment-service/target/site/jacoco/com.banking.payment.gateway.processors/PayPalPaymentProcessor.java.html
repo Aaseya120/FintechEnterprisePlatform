@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>PayPalPaymentProcessor.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Payment Microservice</a> &gt; <a href="index.source.html" class="el_package">com.banking.payment.gateway.processors</a> &gt; <span class="el_source">PayPalPaymentProcessor.java</span></div><h1>PayPalPaymentProcessor.java</h1><pre class="source lang-java linenums">package com.banking.payment.gateway.processors;
+
+import com.banking.payment.gateway.GatewayDtos.GatewayStatus;
+import com.banking.payment.gateway.GatewayDtos.PaymentGatewayRequest;
+import com.banking.payment.gateway.GatewayDtos.PaymentGatewayResponse;
+import com.banking.payment.gateway.PaymentChannel;
+import com.banking.payment.gateway.PaymentProcessorStrategy;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Instant;
+import java.util.UUID;
+
+@Component
+<span class="nc" id="L18">public class PayPalPaymentProcessor implements PaymentProcessorStrategy {</span>
+
+<span class="nc" id="L20">    private static final Logger log = LoggerFactory.getLogger(PayPalPaymentProcessor.class);</span>
+
+    @Override
+    public boolean supports(PaymentChannel channel) {
+<span class="nc bnc" id="L24" title="All 2 branches missed.">        return channel == PaymentChannel.PAYPAL;</span>
+    }
+
+    @Override
+    public PaymentGatewayResponse process(PaymentGatewayRequest request, String correlationId) {
+        // Standard PayPal Merchant Fee calculation: 2.9% + 0.30
+<span class="nc" id="L30">        BigDecimal fee = request.amount().multiply(new BigDecimal(&quot;0.029&quot;)).add(new BigDecimal(&quot;0.30&quot;)).setScale(2, RoundingMode.HALF_UP);</span>
+<span class="nc" id="L31">        String payPalOrderId = &quot;PAYID-&quot; + UUID.randomUUID().toString().substring(0, 16).toUpperCase();</span>
+<span class="nc" id="L32">        String txnRef = &quot;PAYPAL_&quot; + UUID.randomUUID().toString().replace(&quot;-&quot;, &quot;&quot;).substring(0, 12);</span>
+
+<span class="nc" id="L34">        log.info(&quot;Processed PayPal payment [Payer: {}, Amount: {} {}, Fee: {}, Order: {}, corr: {}]&quot;,</span>
+<span class="nc" id="L35">                request.sourceAccountOrVpaOrCard(), request.amount(), request.currency(), fee, payPalOrderId, correlationId);</span>
+
+<span class="nc" id="L37">        return new PaymentGatewayResponse(</span>
+                txnRef,
+                PaymentChannel.PAYPAL,
+<span class="nc" id="L40">                request.amount(),</span>
+<span class="nc" id="L41">                request.currency(),</span>
+                GatewayStatus.SUCCESS,
+                &quot;PayPal order captured and settled. Net amount credited after platform gateway fee.&quot;,
+                payPalOrderId,
+<span class="nc" id="L45">                Instant.now()</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

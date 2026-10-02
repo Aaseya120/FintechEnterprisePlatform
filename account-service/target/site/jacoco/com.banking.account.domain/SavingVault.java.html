@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SavingVault.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Account Microservice</a> &gt; <a href="index.source.html" class="el_package">com.banking.account.domain</a> &gt; <span class="el_source">SavingVault.java</span></div><h1>SavingVault.java</h1><pre class="source lang-java linenums">package com.banking.account.domain;
+
+import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+
+@Entity
+@Table(
+    name = &quot;saving_vaults&quot;,
+    indexes = {
+        @Index(name = &quot;idx_vault_customer&quot;, columnList = &quot;customer_id&quot;),
+        @Index(name = &quot;idx_vault_parent_acc&quot;, columnList = &quot;parent_account_number&quot;)
+    }
+)
+@Getter
+@Setter
+@NoArgsConstructor
+public class SavingVault {
+
+    @Id
+    @Column(name = &quot;id&quot;, length = 36, nullable = false)
+    private String id;
+
+    @Column(name = &quot;customer_id&quot;, length = 36, nullable = false)
+    private String customerId;
+
+    @Column(name = &quot;parent_account_number&quot;, length = 34, nullable = false)
+    private String parentAccountNumber;
+
+    @Column(name = &quot;vault_name&quot;, length = 100, nullable = false)
+    private String vaultName;
+
+    @Column(name = &quot;target_amount&quot;, precision = 19, scale = 4, nullable = false)
+    private BigDecimal targetAmount;
+
+    @Column(name = &quot;current_balance&quot;, precision = 19, scale = 4, nullable = false)
+    private BigDecimal currentBalance;
+
+    @Column(name = &quot;currency&quot;, length = 3, nullable = false)
+    private String currency;
+
+    @Column(name = &quot;target_date&quot;)
+    private LocalDate targetDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = &quot;lock_status&quot;, length = 20, nullable = false)
+    private LockStatus lockStatus;
+
+    @Column(name = &quot;auto_roundup_enabled&quot;, nullable = false)
+    private boolean autoRoundupEnabled;
+
+    @Column(name = &quot;created_at&quot;, nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = &quot;updated_at&quot;, nullable = false)
+    private Instant updatedAt;
+
+<span class="nc" id="L63">    public enum LockStatus { LOCKED, UNLOCKED }</span>
+
+    public SavingVault(String id, String customerId, String parentAccountNumber, String vaultName,
+<span class="nc" id="L66">                       BigDecimal targetAmount, String currency, LocalDate targetDate, boolean autoRoundupEnabled) {</span>
+<span class="nc" id="L67">        this.id = id;</span>
+<span class="nc" id="L68">        this.customerId = customerId;</span>
+<span class="nc" id="L69">        this.parentAccountNumber = parentAccountNumber;</span>
+<span class="nc" id="L70">        this.vaultName = vaultName;</span>
+<span class="nc" id="L71">        this.targetAmount = targetAmount;</span>
+<span class="nc" id="L72">        this.currentBalance = BigDecimal.ZERO;</span>
+<span class="nc" id="L73">        this.currency = currency.toUpperCase();</span>
+<span class="nc" id="L74">        this.targetDate = targetDate;</span>
+<span class="nc" id="L75">        this.lockStatus = LockStatus.UNLOCKED;</span>
+<span class="nc" id="L76">        this.autoRoundupEnabled = autoRoundupEnabled;</span>
+<span class="nc" id="L77">        this.createdAt = Instant.now();</span>
+<span class="nc" id="L78">        this.updatedAt = Instant.now();</span>
+<span class="nc" id="L79">    }</span>
+
+    public void deposit(BigDecimal amount) {
+<span class="nc" id="L82">        this.currentBalance = this.currentBalance.add(amount);</span>
+<span class="nc" id="L83">        this.updatedAt = Instant.now();</span>
+<span class="nc" id="L84">    }</span>
+
+    public void withdraw(BigDecimal amount) {
+<span class="nc" id="L87">        this.currentBalance = this.currentBalance.subtract(amount);</span>
+<span class="nc" id="L88">        this.updatedAt = Instant.now();</span>
+<span class="nc" id="L89">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

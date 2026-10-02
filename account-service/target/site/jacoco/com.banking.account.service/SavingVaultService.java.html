@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SavingVaultService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Account Microservice</a> &gt; <a href="index.source.html" class="el_package">com.banking.account.service</a> &gt; <span class="el_source">SavingVaultService.java</span></div><h1>SavingVaultService.java</h1><pre class="source lang-java linenums">package com.banking.account.service;
+
+import com.banking.account.domain.Account;
+import com.banking.account.domain.SavingVault;
+import com.banking.account.dto.SavingVaultDtos.*;
+import com.banking.account.repository.AccountRepository;
+import com.banking.account.repository.SavingVaultRepository;
+import com.banking.common.audit.BankingServiceRegistry;
+import com.banking.common.exception.BankingException;
+import com.banking.common.exception.ResourceNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.UUID;
+
+@Service
+public class SavingVaultService {
+
+<span class="nc" id="L24">    private static final Logger log = LoggerFactory.getLogger(SavingVaultService.class);</span>
+
+    private final SavingVaultRepository vaultRepository;
+    private final AccountRepository accountRepository;
+    private final AccountService accountService;
+
+    public SavingVaultService(SavingVaultRepository vaultRepository,
+                              AccountRepository accountRepository,
+<span class="nc" id="L32">                              AccountService accountService) {</span>
+<span class="nc" id="L33">        this.vaultRepository = vaultRepository;</span>
+<span class="nc" id="L34">        this.accountRepository = accountRepository;</span>
+<span class="nc" id="L35">        this.accountService = accountService;</span>
+<span class="nc" id="L36">    }</span>
+
+    @Transactional
+    public SavingVaultResponseDto createVault(CreateSavingVaultRequestDto dto) {
+<span class="nc" id="L40">        Account parent = accountRepository.findByAccountNumber(dto.parentAccountNumber())</span>
+<span class="nc" id="L41">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Account&quot;, dto.parentAccountNumber()));</span>
+
+<span class="nc bnc" id="L43" title="All 2 branches missed.">        if (!parent.getCustomerId().equals(dto.customerId())) {</span>
+<span class="nc" id="L44">            throw new BankingException(&quot;UNAUTHORIZED_ACCOUNT&quot;, &quot;Parent account does not belong to customer&quot;, HttpStatus.FORBIDDEN);</span>
+        }
+
+<span class="nc" id="L47">        String vaultId = &quot;vlt_&quot; + UUID.randomUUID().toString().replace(&quot;-&quot;, &quot;&quot;).substring(0, 16);</span>
+<span class="nc bnc" id="L48" title="All 4 branches missed.">        boolean autoRoundup = dto.autoRoundupEnabled() != null &amp;&amp; dto.autoRoundupEnabled();</span>
+
+<span class="nc" id="L50">        SavingVault vault = new SavingVault(</span>
+                vaultId,
+<span class="nc" id="L52">                dto.customerId(),</span>
+<span class="nc" id="L53">                dto.parentAccountNumber(),</span>
+<span class="nc" id="L54">                dto.vaultName(),</span>
+<span class="nc" id="L55">                dto.targetAmount(),</span>
+<span class="nc" id="L56">                dto.currency(),</span>
+<span class="nc" id="L57">                dto.targetDate(),</span>
+                autoRoundup
+        );
+
+<span class="nc" id="L61">        SavingVault saved = vaultRepository.save(vault);</span>
+<span class="nc" id="L62">        log.info(&quot;[{}] Created Saving Vault: id={}, name='{}', target={}&quot;,</span>
+<span class="nc" id="L63">                BankingServiceRegistry.ACCOUNT_LEDGER.getServiceId(), saved.getId(), saved.getVaultName(), saved.getTargetAmount());</span>
+
+<span class="nc" id="L65">        return SavingVaultResponseDto.fromEntity(saved);</span>
+    }
+
+    @Transactional
+    public SavingVaultResponseDto depositToVault(String vaultId, BigDecimal amount) {
+<span class="nc" id="L70">        SavingVault vault = vaultRepository.findById(vaultId)</span>
+<span class="nc" id="L71">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;SavingVault&quot;, vaultId));</span>
+
+        // Atomically debit parent account
+<span class="nc" id="L74">        accountService.debitAccount(vault.getParentAccountNumber(), amount, UUID.randomUUID().toString(), vault.getCustomerId());</span>
+
+        // Credit saving vault
+<span class="nc" id="L77">        vault.deposit(amount);</span>
+<span class="nc" id="L78">        SavingVault updated = vaultRepository.save(vault);</span>
+
+<span class="nc" id="L80">        log.info(&quot;[{}] Deposited {} {} to Vault '{}'. New balance: {}&quot;,</span>
+<span class="nc" id="L81">                BankingServiceRegistry.ACCOUNT_LEDGER.getServiceId(), amount, vault.getCurrency(), vault.getVaultName(), updated.getCurrentBalance());</span>
+
+<span class="nc" id="L83">        return SavingVaultResponseDto.fromEntity(updated);</span>
+    }
+
+    @Transactional
+    public SavingVaultResponseDto withdrawFromVault(String vaultId, BigDecimal amount) {
+<span class="nc" id="L88">        SavingVault vault = vaultRepository.findById(vaultId)</span>
+<span class="nc" id="L89">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;SavingVault&quot;, vaultId));</span>
+
+<span class="nc bnc" id="L91" title="All 2 branches missed.">        if (vault.getLockStatus() == SavingVault.LockStatus.LOCKED) {</span>
+<span class="nc" id="L92">            throw new BankingException(&quot;VAULT_LOCKED&quot;, &quot;Cannot withdraw from locked vault. Unlock vault first.&quot;, HttpStatus.BAD_REQUEST);</span>
+        }
+
+<span class="nc bnc" id="L95" title="All 2 branches missed.">        if (vault.getCurrentBalance().compareTo(amount) &lt; 0) {</span>
+<span class="nc" id="L96">            throw new BankingException(&quot;INSUFFICIENT_VAULT_BALANCE&quot;, &quot;Vault balance is lower than requested withdrawal&quot;, HttpStatus.UNPROCESSABLE_ENTITY);</span>
+        }
+
+        // Debit saving vault
+<span class="nc" id="L100">        vault.withdraw(amount);</span>
+<span class="nc" id="L101">        SavingVault updated = vaultRepository.save(vault);</span>
+
+        // Atomically credit parent account back
+<span class="nc" id="L104">        accountService.creditAccount(vault.getParentAccountNumber(), amount, UUID.randomUUID().toString(), vault.getCustomerId());</span>
+
+<span class="nc" id="L106">        log.info(&quot;[{}] Withdrew {} {} from Vault '{}' into Account {}.&quot;,</span>
+<span class="nc" id="L107">                BankingServiceRegistry.ACCOUNT_LEDGER.getServiceId(), amount, vault.getCurrency(), vault.getVaultName(), vault.getParentAccountNumber());</span>
+
+<span class="nc" id="L109">        return SavingVaultResponseDto.fromEntity(updated);</span>
+    }
+
+    @Transactional
+    public SavingVaultResponseDto toggleLock(String vaultId) {
+<span class="nc" id="L114">        SavingVault vault = vaultRepository.findById(vaultId)</span>
+<span class="nc" id="L115">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;SavingVault&quot;, vaultId));</span>
+
+<span class="nc bnc" id="L117" title="All 2 branches missed.">        vault.setLockStatus(vault.getLockStatus() == SavingVault.LockStatus.LOCKED</span>
+<span class="nc" id="L118">                ? SavingVault.LockStatus.UNLOCKED</span>
+<span class="nc" id="L119">                : SavingVault.LockStatus.LOCKED);</span>
+
+<span class="nc" id="L121">        SavingVault saved = vaultRepository.save(vault);</span>
+<span class="nc" id="L122">        log.info(&quot;[{}] Toggled vault lock status: vaultId={}, status={}&quot;,</span>
+<span class="nc" id="L123">                BankingServiceRegistry.ACCOUNT_LEDGER.getServiceId(), vaultId, saved.getLockStatus());</span>
+
+<span class="nc" id="L125">        return SavingVaultResponseDto.fromEntity(saved);</span>
+    }
+
+    @Transactional(readOnly = true)
+    public List&lt;SavingVaultResponseDto&gt; getVaultsByCustomer(String customerId) {
+<span class="nc" id="L130">        return vaultRepository.findByCustomerIdOrderByCreatedAtDesc(customerId)</span>
+<span class="nc" id="L131">                .stream()</span>
+<span class="nc" id="L132">                .map(SavingVaultResponseDto::fromEntity)</span>
+<span class="nc" id="L133">                .toList();</span>
+    }
+
+    @Transactional(readOnly = true)
+    public SavingVaultResponseDto getVaultById(String vaultId) {
+<span class="nc" id="L138">        return vaultRepository.findById(vaultId)</span>
+<span class="nc" id="L139">                .map(SavingVaultResponseDto::fromEntity)</span>
+<span class="nc" id="L140">                .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;SavingVault&quot;, vaultId));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

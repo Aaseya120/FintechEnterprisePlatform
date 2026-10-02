@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>BankingServiceRegistry.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Banking Common Library</a> &gt; <a href="index.source.html" class="el_package">com.banking.common.audit</a> &gt; <span class="el_source">BankingServiceRegistry.java</span></div><h1>BankingServiceRegistry.java</h1><pre class="source lang-java linenums">package com.banking.common.audit;
+
+import lombok.Getter;
+
+/**
+ * Enterprise Service Registry:
+ * Standardizes microservice identifiers (serviceId) across the banking ecosystem.
+ * Each customer interaction across every service tags this serviceId in audit logs,
+ * distributed tracing, and service catalogue permissions.
+ */
+<span class="nc" id="L11">@Getter</span>
+public enum BankingServiceRegistry {
+
+<span class="nc" id="L14">    GATEWAY(&quot;SRV-GW-000&quot;, &quot;API Gateway&quot;, &quot;Gateway Routing, JWT Authentication &amp; Redis Rate Limiting&quot;),</span>
+<span class="nc" id="L15">    ONBOARDING_KYC(&quot;SRV-ONB-001&quot;, &quot;Customer Onboarding &amp; KYC Service&quot;, &quot;Digital Customer Onboarding, Identity Proof &amp; Video KYC&quot;),</span>
+<span class="nc" id="L16">    ACCOUNT_LEDGER(&quot;SRV-ACC-002&quot;, &quot;Account &amp; Ledger Service&quot;, &quot;Core Double-Entry Ledger, Balances, GraphQL &amp; Legacy CBS Bridge&quot;),</span>
+<span class="nc" id="L17">    PAYMENT_TRANSFER(&quot;SRV-PAY-003&quot;, &quot;Payment &amp; Transfer Service&quot;, &quot;Multi-Rail Transfers (UPI, NEFT, IMPS, Cards, FX) &amp; 2-Phase Saga&quot;),</span>
+<span class="nc" id="L18">    EXCHANGE_RATE(&quot;SRV-FX-004&quot;, &quot;Exchange Rate &amp; Forex Service&quot;, &quot;ISO Currencies, Real-Time Market Ticker &amp; Guaranteed Quotes&quot;),</span>
+<span class="nc" id="L19">    CARD_MANAGEMENT(&quot;SRV-CRD-005&quot;, &quot;Card Management Service&quot;, &quot;Debit &amp; Credit Card Issuance, Luhn PAN, PIN Hashing &amp; Security&quot;),</span>
+<span class="nc" id="L20">    LOAN_LENDING(&quot;SRV-LON-006&quot;, &quot;Loan &amp; Lending Service&quot;, &quot;Underwriting, Risk Assessment, Mathematical EMI &amp; Amortization&quot;),</span>
+<span class="nc" id="L21">    FRAUD_DETECTION(&quot;SRV-FRD-007&quot;, &quot;Fraud Detection Service&quot;, &quot;Sliding-Window Redis Velocity Rules &amp; Real-Time Risk Engine&quot;),</span>
+<span class="nc" id="L22">    NOTIFICATION(&quot;SRV-NOT-008&quot;, &quot;Notification Service&quot;, &quot;Omni-Channel Customer Alerts (SMS, Email, Push Notifications)&quot;),</span>
+<span class="nc" id="L23">    REPORTING(&quot;SRV-REP-009&quot;, &quot;Reporting &amp; Statement Service&quot;, &quot;Multi-Format Financial Statements (PDF, Excel, CSV, JSON) &amp; Audits&quot;),</span>
+<span class="nc" id="L24">    BATCH_CLEARING(&quot;SRV-BTC-010&quot;, &quot;Batch &amp; High-Volume Clearing Service&quot;, &quot;Spring Batch Chunk Ingestion, Oracle 19c PL/SQL &amp; Reconciliation&quot;);</span>
+
+    private final String serviceId;
+    private final String serviceName;
+    private final String description;
+
+<span class="nc" id="L30">    BankingServiceRegistry(String serviceId, String serviceName, String description) {</span>
+<span class="nc" id="L31">        this.serviceId = serviceId;</span>
+<span class="nc" id="L32">        this.serviceName = serviceName;</span>
+<span class="nc" id="L33">        this.description = description;</span>
+<span class="nc" id="L34">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AccountGraphQLController.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Account Microservice</a> &gt; <a href="index.source.html" class="el_package">com.banking.account.controller</a> &gt; <span class="el_source">AccountGraphQLController.java</span></div><h1>AccountGraphQLController.java</h1><pre class="source lang-java linenums">package com.banking.account.controller;
+
+import com.banking.account.domain.AccountType;
+import com.banking.account.dto.AccountResponseDto;
+import com.banking.account.dto.CreateAccountRequest;
+import com.banking.account.dto.SavingVaultDtos.CreateSavingVaultRequestDto;
+import com.banking.account.dto.SavingVaultDtos.SavingVaultResponseDto;
+import com.banking.account.middleware.LegacyCbsDtos.*;
+import com.banking.account.middleware.LegacyCbsMiddlewareGateway;
+import com.banking.account.service.AccountService;
+import com.banking.account.service.SavingVaultService;
+import org.springframework.graphql.data.method.annotation.Argument;
+import org.springframework.graphql.data.method.annotation.MutationMapping;
+import org.springframework.graphql.data.method.annotation.QueryMapping;
+import org.springframework.stereotype.Controller;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+@Controller
+public class AccountGraphQLController {
+
+    private final AccountService accountService;
+    private final LegacyCbsMiddlewareGateway cbsGateway;
+    private final SavingVaultService vaultService;
+
+    public AccountGraphQLController(AccountService accountService,
+                                  LegacyCbsMiddlewareGateway cbsGateway,
+<span class="nc" id="L32">                                  SavingVaultService vaultService) {</span>
+<span class="nc" id="L33">        this.accountService = accountService;</span>
+<span class="nc" id="L34">        this.cbsGateway = cbsGateway;</span>
+<span class="nc" id="L35">        this.vaultService = vaultService;</span>
+<span class="nc" id="L36">    }</span>
+
+    @QueryMapping
+    public AccountResponseDto accountByNumber(@Argument String accountNumber) {
+<span class="nc" id="L40">        return accountService.getAccountByNumber(accountNumber);</span>
+    }
+
+    @QueryMapping
+    public List&lt;AccountResponseDto&gt; accountsByCustomer(@Argument String customerId) {
+<span class="nc" id="L45">        return accountService.getAccountsByCustomer(customerId);</span>
+    }
+
+    @QueryMapping
+    public Map&lt;String, Object&gt; accountBalance(@Argument String accountNumber) {
+<span class="nc" id="L50">        BigDecimal balance = accountService.getAvailableBalance(accountNumber);</span>
+<span class="nc" id="L51">        return Map.of(&quot;accountNumber&quot;, accountNumber, &quot;availableBalance&quot;, balance.doubleValue());</span>
+    }
+
+    @QueryMapping
+    public CbsAccountInquiryResponse legacyCbsAccount(@Argument String accountNumber) {
+<span class="nc" id="L56">        return cbsGateway.queryAccount(accountNumber);</span>
+    }
+
+    @QueryMapping
+    public CbsHealthCheckResponse legacyCbsHealth() {
+<span class="nc" id="L61">        return cbsGateway.checkConnectivity();</span>
+    }
+
+    @QueryMapping
+    public List&lt;SavingVaultResponseDto&gt; savingVaultsByCustomer(@Argument String customerId) {
+<span class="nc" id="L66">        return vaultService.getVaultsByCustomer(customerId);</span>
+    }
+
+    @QueryMapping
+    public SavingVaultResponseDto savingVaultById(@Argument String vaultId) {
+<span class="nc" id="L71">        return vaultService.getVaultById(vaultId);</span>
+    }
+
+    @MutationMapping
+    public AccountResponseDto openAccount(@Argument OpenAccountInput input) {
+<span class="nc" id="L76">        CreateAccountRequest request = new CreateAccountRequest(</span>
+<span class="nc" id="L77">                input.customerId(),</span>
+<span class="nc" id="L78">                input.accountType(),</span>
+<span class="nc" id="L79">                input.currency(),</span>
+<span class="nc" id="L80">                BigDecimal.valueOf(input.initialDeposit())</span>
+        );
+<span class="nc" id="L82">        return accountService.createAccount(request);</span>
+    }
+
+    @MutationMapping
+    public AccountResponseDto debitAccount(@Argument String accountNumber, @Argument Float amount) {
+<span class="nc" id="L87">        return accountService.debitAccount(</span>
+                accountNumber,
+<span class="nc" id="L89">                BigDecimal.valueOf(amount),</span>
+<span class="nc" id="L90">                UUID.randomUUID().toString(),</span>
+                &quot;GRAPHQL_CLIENT&quot;
+        );
+    }
+
+    @MutationMapping
+    public AccountResponseDto creditAccount(@Argument String accountNumber, @Argument Float amount) {
+<span class="nc" id="L97">        return accountService.creditAccount(</span>
+                accountNumber,
+<span class="nc" id="L99">                BigDecimal.valueOf(amount),</span>
+<span class="nc" id="L100">                UUID.randomUUID().toString(),</span>
+                &quot;GRAPHQL_CLIENT&quot;
+        );
+    }
+
+    @MutationMapping
+    public CbsPostingResponse postLegacyCbsTransaction(@Argument LegacyCbsPostInput input) {
+<span class="nc" id="L107">        CbsPostingRequest request = new CbsPostingRequest(</span>
+<span class="nc" id="L108">                input.transactionRef(),</span>
+<span class="nc" id="L109">                input.sourceAccount(),</span>
+<span class="nc" id="L110">                input.targetAccount(),</span>
+<span class="nc" id="L111">                BigDecimal.valueOf(input.amount()),</span>
+<span class="nc" id="L112">                input.currency(),</span>
+<span class="nc" id="L113">                input.narration(),</span>
+                &quot;GRAPHQL_SOA_MIDDLEWARE&quot;
+        );
+<span class="nc" id="L116">        return cbsGateway.postTransaction(request);</span>
+    }
+
+    @MutationMapping
+    public SavingVaultResponseDto createSavingVault(@Argument CreateSavingVaultInput input) {
+<span class="nc bnc" id="L121" title="All 4 branches missed.">        LocalDate targetDate = input.targetDate() != null &amp;&amp; !input.targetDate().isBlank()</span>
+<span class="nc" id="L122">                ? LocalDate.parse(input.targetDate()) : null;</span>
+
+<span class="nc" id="L124">        CreateSavingVaultRequestDto req =</span>
+                new CreateSavingVaultRequestDto(
+<span class="nc" id="L126">                        input.customerId(),</span>
+<span class="nc" id="L127">                        input.parentAccountNumber(),</span>
+<span class="nc" id="L128">                        input.vaultName(),</span>
+<span class="nc" id="L129">                        BigDecimal.valueOf(input.targetAmount()),</span>
+<span class="nc" id="L130">                        input.currency(),</span>
+                        targetDate,
+<span class="nc" id="L132">                        input.autoRoundupEnabled()</span>
+                );
+<span class="nc" id="L134">        return vaultService.createVault(req);</span>
+    }
+
+    @MutationMapping
+    public SavingVaultResponseDto depositToVault(@Argument String vaultId, @Argument Float amount) {
+<span class="nc" id="L139">        return vaultService.depositToVault(vaultId, BigDecimal.valueOf(amount));</span>
+    }
+
+    @MutationMapping
+    public SavingVaultResponseDto withdrawFromVault(@Argument String vaultId, @Argument Float amount) {
+<span class="nc" id="L144">        return vaultService.withdrawFromVault(vaultId, BigDecimal.valueOf(amount));</span>
+    }
+
+<span class="nc" id="L147">    public record OpenAccountInput(String customerId, AccountType accountType, String currency, Double initialDeposit) {}</span>
+
+<span class="nc" id="L149">    public record CreateSavingVaultInput(String customerId, String parentAccountNumber, String vaultName, Double targetAmount, String currency, String targetDate, Boolean autoRoundupEnabled) {}</span>
+
+<span class="nc" id="L151">    public record LegacyCbsPostInput(String transactionRef, String sourceAccount, String targetAccount, Double amount, String currency, String narration) {}</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

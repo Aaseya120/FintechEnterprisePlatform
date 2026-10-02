@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.banking.common.idempotency.IdempotencyServiceTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 2.602 s -- in com.banking.common.idempotency.IdempotencyServiceTest

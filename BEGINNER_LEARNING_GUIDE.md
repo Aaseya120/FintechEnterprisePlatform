@@ -1017,6 +1017,84 @@ Handles real-time bill presentment, inquiry, and settlement with external utilit
 
 ---
 
+## 🚶 Step 15: AI-Powered Risk Reasoning & Spring AI (`fraud-detection-service`)
+
+Combines Redis velocity heuristics with GenAI risk reasoning to generate plain-English AML audit summaries and triage actions for compliance officers.
+
+### Key Highlights:
+- **Port:** `8086`
+- **Class:** [`AiFraudAdvisorService.java`](file:///d:/Projects/Resume_Project/fraud-detection-service/src/main/java/com/banking/fraud/service/AiFraudAdvisorService.java)
+- **API:** `POST /api/v1/fraud/ai/analyze`
+- **What it does:** Calculates anomaly vectors, determines risk tiers (`CRITICAL`, `ELEVATED`, `LOW`), and suggests actions (`IMMEDIATE_HOLD`, `STEP_UP_AUTH`).
+
+#### Sample Request:
+```json
+POST /api/v1/fraud/ai/analyze
+{
+  "transactionId": "tx-ai-901",
+  "accountNumber": "US1000000001",
+  "amount": 125000.00,
+  "currency": "USD"
+}
+```
+
+#### Sample Response:
+```json
+{
+  "transactionId": "tx-ai-901",
+  "accountId": "US1000000001",
+  "riskScore": 75,
+  "riskTier": "ELEVATED_SUSPICION",
+  "executiveSummary": "AI Risk Reasoning: Transaction of 125000.00 USD exhibited heuristic anomalies. Recommends STEP_UP_AUTH.",
+  "recommendedAction": "STEP_UP_AUTH: Challenge transaction with biometric OTP.",
+  "aiConfidenceScore": 0.88,
+  "generatedAt": "2026-10-02T15:30:00Z"
+}
+```
+
+---
+
+## 🚶 Step 16: Enterprise CI/CD Pipeline & DevOps Automation
+
+Automated delivery pipeline defined in [`.github/workflows/ci-cd.yml`](file:///d:/Projects/Resume_Project/.github/workflows/ci-cd.yml) with 5 production stages:
+
+1. **Build & Unit Tests (`mvn clean verify -Pcoverage`):** Compiles JDK 21, runs Mockito unit tests, generates JaCoCo XML reports.
+2. **SonarQube Quality Gate:** Static code analysis, vulnerability detection, and code smell verification.
+3. **OWASP Security Scan:** Inspects 3rd-party dependencies for CVE vulnerabilities.
+4. **Multi-Stage Docker Build:** Builds hardened minimal Alpine runtime images with non-root user `banking` and pushes to AWS ECR.
+5. **Helm Deployment to AWS EKS:** Lints Helm charts and performs zero-downtime rolling upgrades to Amazon EKS cluster.
+
+---
+
+## 🗺️ 2026 Modern Java Developer Roadmap: Where Everything Lives
+
+| Pillar | 2026 Roadmap Topic | Where It Lives in Our Codebase |
+| :--- | :--- | :--- |
+| **1. JAVA** | **Collections** | `ConcurrentHashMap` for token blacklisting, `List.of()`, `Map.of()` in `banking-common`. |
+| | **Streams** | Functional grouping by currency and batch aggregations in `reporting-service`. |
+| | **Multithreading** | JDK 21 Virtual Threads, `CompletableFuture`, Redis distributed locks. |
+| | **JVM & Memory** | JDK 21 flags (`-XX:+EnableDynamicAgentLoading`), heap tuning in Docker. |
+| | **Modern Java 21** | Immutable `record` DTOs, sealed interfaces, pattern matching `switch`. |
+| **2. SPRING BOOT** | **REST APIs** | Bean validation (`@Valid`), OpenAPI / Swagger 3, semantic HTTP statuses. |
+| | **Security & JWT** | Spring Security 6 stateless filter chain, HMAC-SHA256 JWT tokens. |
+| | **JPA / Hibernate** | Spring Data JPA, optimistic locking (`@Version`), Flyway migrations. |
+| | **Exception Handling** | Global `@RestControllerAdvice` mapping errors to RFC 7807 ProblemDetails. |
+| | **Actuator** | Health probes (`/actuator/health`), Micrometer, distributed correlation IDs. |
+| **3. MICROSERVICES**| **API Gateway** | Spring Cloud Gateway routing, JWT verification, rate limiting. |
+| | **Service Discovery** | Kubernetes DNS resolution and resilient `RestClient` HTTP calls. |
+| | **Resilience Patterns**| Resilience4j Circuit Breakers, Retry policies, and fallback degradation. |
+| | **Event-Driven Arch**| Transactional Outbox pattern and 2-Phase Saga distributed orchestration. |
+| | **Apache Kafka** | Event producers, consumers with Dead Letter Queue (DLQ) retry routing. |
+| **4. CLOUD & DEVOPS**| **AWS Fundamentals**| AWS EKS, AWS ECR, IAM security roles, CloudWatch metrics. |
+| | **Docker** | Multi-stage Dockerfile (`builder` ➔ minimal JRE 21 runtime), non-root user. |
+| | **Kubernetes & Helm** | Production Helm chart (`./helm/banking-platform`), HPA autoscaling. |
+| | **CI/CD Pipeline** | GitHub Actions 5-stage automated pipeline with JaCoCo and SonarQube. |
+| **5. AI FOR DEVS** | **Spring AI & GenAI**| `AiFraudAdvisorService` and `AiFraudAdvisorController` in `fraud-detection-service`. |
+| | **AI-Assisted Dev** | Scaffolding DTO records, regex validators, unit tests via Copilot/ChatGPT. |
+| | **Code Quality** | Automated SonarQube quality gate and OWASP CVE dependency scanners. |
+
+---
+
 ## 🏛️ Top 6 Design Patterns to Notice in this Codebase
 
 As a fresher, understanding *why* a pattern is used will accelerate your career:

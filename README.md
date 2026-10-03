@@ -9,7 +9,9 @@
 
 A production-grade core banking platform built with **Java 21 Virtual Threads**, **Spring Boot 3.3**, and **Spring Cloud Gateway**, engineered for low-latency financial transactions, multi-rail payments, automated reconciliation, and legacy mainframe interoperability.
 
-> 💡 **New to the project or looking to understand the full flow?** Check out the [**Fresher's Step-by-Step Learning Guide**](file:///d:/Projects/Resume_Project/BEGINNER_LEARNING_GUIDE.md) covering the recommended reading order, end-to-end sample requests, and design patterns.
+> 💡 **New to the project or looking to understand the full flow?** Check out the [**Fresher's Step-by-Step Learning Guide**](BEGINNER_LEARNING_GUIDE.md) covering the recommended reading order, end-to-end sample requests, and design patterns.
+
+> 🎯 **Preparing for interviews?** See the [**Interview Preparation Cheat Sheet**](INTERVIEW_PREPARATION.md) — ultra-short bullet points covering all 13 modules, 7 design patterns, 6 API styles, security, Kafka, Redis, Docker, K8s, CI/CD, and 14 common Q&A.
 
 ---
 
@@ -54,14 +56,28 @@ graph TD
 | [**payment-service**](file:///d:/Projects/Resume_Project/payment-service) | `8082` | Distributed fund transfers, 2-phase Saga, Multi-rail gateways | Kafka, Outbox Pattern, Strategy Pattern |
 | [**exchange-rate-service**](file:///d:/Projects/Resume_Project/exchange-rate-service) | `8083` | Global currencies, dynamic interbank FX ticker, quotes | Redis Cache, Scheduled Brownian motion |
 | [**customer-service**](file:///d:/Projects/Resume_Project/customer-service) | `8084` | Digital onboarding, KYC lifecycle, Beneficiary cooling-off | AES-256-GCM Crypto, Flyway |
-| [**loan-service**](file:///d:/Projects/Resume_Project/loan-service) | `8085` | Loan underwriting, mathematical EMI formula, amortization | Spring Data JPA, Amortization Math |
-| [**card-service**](file:///d:/Projects/Resume_Project/card-service) | `8086` | Debit/Credit issuance, Luhn check digit, PIN hashing | SHA-256, PCI-DSS Masking |
-| [**fraud-detection-service**](file:///d:/Projects/Resume_Project/fraud-detection-service) | `8087` | Real-time velocity rules, Spring AI risk reasoning | Redis Sorted Sets, Rule Engine, Spring AI |
-| [**notification-service**](file:///d:/Projects/Resume_Project/notification-service) | `8088` | Omni-channel alerts (SMS, Email, Push FCM/APNS) | Kafka Consumer, Twilio/SendGrid mock |
-| [**reporting-service**](file:///d:/Projects/Resume_Project/reporting-service) | `8089` | Statement export (PDF, Excel, CSV, JSON) and import | OpenPDF, Apache POI 5.3, Strategy Pattern |
-| [**batch-service**](file:///d:/Projects/Resume_Project/batch-service) | `8090` | High-volume clearing ingestion, Oracle PL/SQL, reconciliation | Spring Batch 5, Oracle 19c PL/SQL |
-| [**bill-payment-service**](file:///d:/Projects/Resume_Project/bill-payment-service) | `8091` | Utility & Telecom bill presentment, inquiry, and settlement | Strategy Pattern, Kafka, Flyway, Idempotency |
-| [**banking-common**](file:///d:/Projects/Resume_Project/banking-common) | - | Shared DTOs, AES-GCM crypto, masking util, `@Idempotent` | Reusable Java 21 Enterprise Library |
+| [**loan-service**](loan-service) | `8085` | Loan underwriting, mathematical EMI formula, amortization | Spring Data JPA, Amortization Math |
+| [**card-service**](card-service) | `8086` | Debit/Credit issuance, Luhn check digit, Dynamic CVV, PIN hashing | SHA-256, PCI-DSS Masking |
+| [**fraud-detection-service**](fraud-detection-service) | `8087` | Real-time velocity rules, Spring AI risk reasoning | Redis Sorted Sets, Rule Engine, Spring AI |
+| [**notification-service**](notification-service) | `8088` | Omni-channel alerts (SMS, Email, Push FCM/APNS) | Kafka Consumer, Twilio/SendGrid mock |
+| [**reporting-service**](reporting-service) | `8089` | Statement export (PDF, Excel, CSV, JSON) and import | OpenPDF, Apache POI 5.3, Strategy Pattern |
+| [**batch-service**](batch-service) | `8090` | High-volume clearing ingestion, Oracle PL/SQL, reconciliation | Spring Batch 5, Oracle 19c PL/SQL |
+| [**bill-payment-service**](bill-payment-service) | `8091` | Utility & Telecom bill presentment, inquiry, and settlement | Strategy Pattern, Kafka, Flyway, Idempotency |
+| [**banking-common**](banking-common) | - | Shared DTOs, AES-GCM crypto, masking util, `@Idempotent` | Reusable Java 21 Enterprise Library |
+
+---
+
+## 📚 Documentation Index
+
+| Document | Purpose |
+| :--- | :--- |
+| [**README.md**](README.md) | Architecture overview, quick start, API examples |
+| [**INTERVIEW_PREPARATION.md**](INTERVIEW_PREPARATION.md) | Ultra-short cheat sheet for interview Q&A |
+| [**BEGINNER_LEARNING_GUIDE.md**](BEGINNER_LEARNING_GUIDE.md) | Step-by-step learning roadmap with sample requests |
+| [**RESUME_B_V_REDDY.md**](RESUME_B_V_REDDY.md) | Senior Java Developer resume (8+ years) |
+| [**docs/CODE_REVIEW_AND_ARCHITECTURE_STANDARDS.md**](docs/CODE_REVIEW_AND_ARCHITECTURE_STANDARDS.md) | Engineering standards, code review checklist |
+| [**docs/DATABASE_TUNING_AND_EXECUTION_PLANS.md**](docs/DATABASE_TUNING_AND_EXECUTION_PLANS.md) | Index design, query profiling, execution plans |
+| [**docs/PRODUCTION_SUPPORT_RCA_RUNBOOK.md**](docs/PRODUCTION_SUPPORT_RCA_RUNBOOK.md) | OOM, thread exhaustion, slow API — RCA scenarios |
 
 ---
 

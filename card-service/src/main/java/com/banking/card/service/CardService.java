@@ -77,31 +77,31 @@ public class CardService {
     public CardApplicationResponseDto applyCardWithEligibility(CardApplicationRequestDto req) {
         if (req.requestedCardType() == Card.CardType.CREDIT) {
             int score = req.creditScore() != null ? req.creditScore() : 600;
-            java.math.BigDecimal income = req.annualIncome() != null ? req.annualIncome() : java.math.BigDecimal.ZERO;
+            BigDecimal income = req.annualIncome() != null ? req.annualIncome() : BigDecimal.ZERO;
 
             if (score < 650) {
                 return new CardApplicationResponseDto(
                         false,
                         "Credit score " + score + " does not meet minimum credit requirement of 650",
                         null,
-                        java.math.BigDecimal.ZERO,
+                        BigDecimal.ZERO,
                         "INELIGIBLE_FOR_CREDIT"
                 );
             }
 
-            if (income.compareTo(new java.math.BigDecimal("25000.00")) < 0) {
+            if (income.compareTo(new BigDecimal("25000.00")) < 0) {
                 return new CardApplicationResponseDto(
                         false,
                         "Annual income below minimum required threshold of $25,000",
                         null,
-                        java.math.BigDecimal.ZERO,
+                        BigDecimal.ZERO,
                         "INSUFFICIENT_INCOME"
                 );
             }
 
-            java.math.BigDecimal approvedLimit = score >= 750
-                    ? income.multiply(new java.math.BigDecimal("0.20")).min(new java.math.BigDecimal("50000.00"))
-                    : income.multiply(new java.math.BigDecimal("0.10")).min(new java.math.BigDecimal("15000.00"));
+            BigDecimal approvedLimit = score >= 750
+                    ? income.multiply(new BigDecimal("0.20")).min(new BigDecimal("50000.00"))
+                    : income.multiply(new BigDecimal("0.10")).min(new BigDecimal("15000.00"));
 
             CardIssuanceRequestDto issueReq = new CardIssuanceRequestDto(
                     req.customerId(),
@@ -115,9 +115,9 @@ public class CardService {
             String tier = score >= 750 ? "PLATINUM_REWARDS" : "GOLD_REWARDS";
             return new CardApplicationResponseDto(true, null, issued, approvedLimit, tier);
         } else {
-            java.math.BigDecimal defaultLimit = req.requestedCardType() == Card.CardType.VIRTUAL
-                    ? new java.math.BigDecimal("1000.00")
-                    : new java.math.BigDecimal("3000.00");
+            BigDecimal defaultLimit = req.requestedCardType() == Card.CardType.VIRTUAL
+                    ? new BigDecimal("1000.00")
+                    : new BigDecimal("3000.00");
 
             CardIssuanceRequestDto issueReq = new CardIssuanceRequestDto(
                     req.customerId(),

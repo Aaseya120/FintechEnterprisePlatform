@@ -30,7 +30,7 @@ public class JwtTokenProvider {
     private final ObjectMapper objectMapper;
 
     public JwtTokenProvider(
-            @Value("${banking.security.jwt.secret:EnterpriseBankingSuperSecretKeyMustBeAtLeast256BitsLongForHmacSha256Security2026!}") String secretKey,
+            @Value("${banking.security.jwt.secret}") String secretKey,
             @Value("${banking.security.jwt.access-token-validity-seconds:900}") long accessTokenValiditySeconds,
             @Value("${banking.security.jwt.refresh-token-validity-days:7}") long refreshTokenValidityDays,
             ObjectMapper objectMapper) {

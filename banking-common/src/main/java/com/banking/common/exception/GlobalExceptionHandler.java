@@ -31,17 +31,17 @@ public class GlobalExceptionHandler {
     @SuppressWarnings("null")
     public ResponseEntity<ErrorResponse> handleBankingException(BankingException ex, HttpServletRequest request) {
         String correlationId = getOrGenerateCorrelationId(request);
+        HttpStatus status = ex.getHttpStatus() != null ? ex.getHttpStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
         log.warn("Banking business exception occurred [code: {}, path: {}, correlationId: {}]: {}",
                 ex.getErrorCode(), request.getRequestURI(), correlationId, ex.getMessage());
 
         ErrorResponse response = ErrorResponse.of(
-                ex.getHttpStatus().value(),
+                status.value(),
                 ex.getErrorCode(),
                 ex.getMessage(),
                 request.getRequestURI(),
                 correlationId
         );
-        HttpStatus status = ex.getHttpStatus() != null ? ex.getHttpStatus() : HttpStatus.INTERNAL_SERVER_ERROR;
         return ResponseEntity.status(status).body(response);
     }
 

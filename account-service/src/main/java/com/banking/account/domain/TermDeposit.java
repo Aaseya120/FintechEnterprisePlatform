@@ -101,10 +101,16 @@ public class TermDeposit {
             case HALF_YEARLY -> 2;
             case ANNUALLY -> 1;
         };
-        double p = principal.doubleValue();
-        double r = rate.doubleValue();
+        // Pure BigDecimal compound interest: A = P * (1 + r/n)^(n*t)
+        BigDecimal ratePerPeriod = rate.divide(BigDecimal.valueOf(n), 12, RoundingMode.HALF_UP);
+        BigDecimal base = BigDecimal.ONE.add(ratePerPeriod);
         double t = months / 12.0;
-        double a = p * Math.pow(1.0 + (r / n), n * t);
-        return BigDecimal.valueOf(a).setScale(4, RoundingMode.HALF_UP);
+        int totalPeriods = (int) Math.round(n * t);
+
+        BigDecimal compoundFactor = BigDecimal.ONE;
+        for (int i = 0; i < totalPeriods; i++) {
+            compoundFactor = compoundFactor.multiply(base).setScale(12, RoundingMode.HALF_UP);
+        }
+        return principal.multiply(compoundFactor).setScale(4, RoundingMode.HALF_UP);
     }
 }

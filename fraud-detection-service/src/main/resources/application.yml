@@ -73,3 +73,13 @@ logging:
   level:
     root: INFO
     com.banking: DEBUG
+
+# Security Keys (MUST be overridden via environment variables in production)
+banking:
+  security:
+    encryption:
+      master-key: ${BANKING_ENCRYPTION_KEY:BankingEnterpriseSecretMasterKey2026!}
+    jwt:
+      secret: ${BANKING_JWT_SECRET:EnterpriseBankingSuperSecretKeyMustBeAtLeast256BitsLongForHmacSha256Security2026!}
+      access-token-validity-seconds: 900
+      refresh-token-validity-days: 7

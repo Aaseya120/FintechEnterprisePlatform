@@ -74,6 +74,7 @@ graph TD
 | [**README.md**](README.md) | Architecture overview, quick start, API examples |
 | [**INTERVIEW_PREPARATION.md**](INTERVIEW_PREPARATION.md) | Ultra-short cheat sheet for interview Q&A |
 | [**BEGINNER_LEARNING_GUIDE.md**](BEGINNER_LEARNING_GUIDE.md) | Step-by-step learning roadmap with sample requests |
+| [**RESUME_B_V_REDDY.md**](RESUME_B_V_REDDY.md) | Senior Java Developer resume (8+ years) |
 | [**docs/CODE_REVIEW_AND_ARCHITECTURE_STANDARDS.md**](docs/CODE_REVIEW_AND_ARCHITECTURE_STANDARDS.md) | Engineering standards, code review checklist |
 | [**docs/DATABASE_TUNING_AND_EXECUTION_PLANS.md**](docs/DATABASE_TUNING_AND_EXECUTION_PLANS.md) | Index design, query profiling, execution plans |
 | [**docs/PRODUCTION_SUPPORT_RCA_RUNBOOK.md**](docs/PRODUCTION_SUPPORT_RCA_RUNBOOK.md) | OOM, thread exhaustion, slow API — RCA scenarios |

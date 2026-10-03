@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banking Platform — Architecture Diagrams</title>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #0f1117;
+            color: #e1e4e8;
+            min-height: 100vh;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1a1b2e 0%, #16213e 50%, #0f3460 100%);
+            padding: 40px 60px;
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+        }
+
+        header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            background: linear-gradient(90deg, #60a5fa, #a78bfa, #f472b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: #8b949e;
+            font-size: 14px;
+            font-weight: 300;
+        }
+
+        nav {
+            background: #161b22;
+            padding: 16px 60px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav button {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: #c9d1d9;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+
+        nav button:hover, nav button.active {
+            background: rgba(96, 165, 250, 0.15);
+            border-color: #60a5fa;
+            color: #60a5fa;
+        }
+
+        .diagram-section {
+            padding: 40px 60px;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
+        }
+
+        .diagram-section h2 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #f0f6fc;
+        }
+
+        .diagram-section .subtitle {
+            color: #8b949e;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+
+        .diagram-container {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 30px;
+            overflow: hidden;
+            position: relative;
+            cursor: grab;
+            min-height: 400px;
+        }
+
+        .diagram-container:active { cursor: grabbing; }
+
+        .diagram-controls {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            display: flex;
+            gap: 4px;
+            z-index: 10;
+        }
+
+        .diagram-controls button {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            border: 1px solid #d0d7de;
+            background: #f6f8fa;
+            color: #24292f;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .diagram-controls button:hover {
+            background: #0969da;
+            color: white;
+            border-color: #0969da;
+        }
+
+        .diagram-inner {
+            transform-origin: 0 0;
+            transition: transform 0.1s ease-out;
+        }
+
+        .diagram-inner svg {
+            max-width: none !important;
+            height: auto !important;
+        }
+
+        .tip {
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: rgba(56, 139, 253, 0.08);
+            border: 1px solid rgba(56, 139, 253, 0.2);
+            border-radius: 8px;
+            font-size: 12px;
+            color: #79c0ff;
+        }
+
+        .tip strong { color: #58a6ff; }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>🏗️ Enterprise Banking Platform — Architecture Diagrams</h1>
+    <p>Interactive diagrams with zoom (scroll / buttons) and pan (drag). Use for interview preparation.</p>
+</header>
+
+<nav id="navBar"></nav>
+
+<div id="content">
+
+    <!-- DIAGRAM 1 -->
+    <div class="diagram-section" id="section-1">
+        <h2>1. Layered Architecture — Full Stack</h2>
+        <p class="subtitle">All layers from client to infrastructure — how the platform is structured end to end</p>
+        <div class="diagram-container" data-diagram-id="d1">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d1')" title="Zoom In">+</button>
+                <button onclick="zoomOut('d1')" title="Zoom Out">−</button>
+                <button onclick="resetZoom('d1')" title="Reset">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d1">
+                <pre class="mermaid">
+flowchart TB
+    subgraph CLIENTS["🖥️ CLIENT LAYER"]
+        direction LR
+        C1["📱 Mobile App\n(iOS / Android)"]
+        C2["🌐 Web App\n(React / Angular)"]
+        C3["🔗 Third-Party\n(Webhooks / Partners)"]
+    end
+
+    subgraph GATEWAY["🔒 API GATEWAY LAYER — Spring Cloud Gateway :8080"]
+        direction LR
+        G1["CORS\nFilter"]
+        G2["JWT Auth\nFilter"]
+        G3["Redis Rate\nLimiter"]
+        G4["Route\nMatcher"]
+        G1 --> G2 --> G3 --> G4
+    end
+
+    subgraph API["📡 API LAYER — Controllers"]
+        direction LR
+        A1["REST\n@RestController"]
+        A2["GraphQL\n@QueryMapping"]
+        A3["SOAP/XML\n@Endpoint"]
+        A4["Webhooks\nHMAC Receiver"]
+    end
+
+    subgraph BUSINESS["⚙️ BUSINESS LOGIC LAYER — @Service"]
+        direction LR
+        B1["Account\nLedger"]
+        B2["Payment\nSaga"]
+        B3["Loan\nEMI Engine"]
+        B4["Card\nLifecycle"]
+        B5["Fraud\nRule Engine"]
+        B6["Forex\nRate Engine"]
+        B7["Bill\nPayment"]
+    end
+
+    subgraph CROSSCUT["🛡️ CROSS-CUTTING CONCERNS"]
+        direction LR
+        X1["Resilience4j\nCircuit Breaker"]
+        X2["AES-256-GCM\nEncryption"]
+        X3["PCI-DSS\nMasking"]
+        X4["Idempotency\nRedis Keys"]
+        X5["Audit Log\nCorrelation ID"]
+    end
+
+    subgraph INTEGRATION["🔗 INTEGRATION LAYER"]
+        direction LR
+        I1["Kafka\nProducer"]
+        I2["Redis\nCache"]
+        I3["RestClient\nInter-Service"]
+        I4["SOAP Client\nCBS Bridge"]
+        I5["Outbox\nPoller"]
+    end
+
+    subgraph DATA["💾 DATA ACCESS LAYER"]
+        direction LR
+        D1["Spring Data JPA\nRepositories"]
+        D2["Hibernate\nORM"]
+        D3["Flyway\nMigrations"]
+    end
+
+    subgraph INFRA["🏗️ INFRASTRUCTURE LAYER"]
+        direction LR
+        IF1[("PostgreSQL\n16")]
+        IF2[("Oracle\n19c")]
+        IF3[("Redis\n7")]
+        IF4["Kafka\nKRaft"]
+        IF5["Prometheus\n+ Grafana"]
+    end
+
+    subgraph DEPLOY["☁️ DEPLOYMENT LAYER"]
+        direction LR
+        DP1["Docker\nMulti-Stage"]
+        DP2["Kubernetes\nAWS EKS"]
+        DP3["Helm v3\nCharts"]
+        DP4["GitHub Actions\nCI/CD"]
+    end
+
+    CLIENTS ==>|"HTTPS / TLS 1.3"| GATEWAY
+    GATEWAY ==> API
+    API ==> BUSINESS
+    BUSINESS -.-> CROSSCUT
+    BUSINESS ==> INTEGRATION
+    INTEGRATION ==> DATA
+    DATA ==> INFRA
+    INFRA -.-> DEPLOY
+
+    style CLIENTS fill:#1e3a5f,stroke:#60a5fa,color:#e1e8f0
+    style GATEWAY fill:#1a3636,stroke:#4ade80,color:#e1f0e8
+    style API fill:#2d1b4e,stroke:#a78bfa,color:#ede5f7
+    style BUSINESS fill:#3b1e1e,stroke:#f87171,color:#f7e5e5
+    style CROSSCUT fill:#3b3520,stroke:#fbbf24,color:#f7f0e0
+    style INTEGRATION fill:#1e2d3d,stroke:#38bdf8,color:#e0f0f7
+    style DATA fill:#2e2e1e,stroke:#facc15,color:#f7f5e5
+    style INFRA fill:#1e1e2e,stroke:#818cf8,color:#e5e5f7
+    style DEPLOY fill:#1e2e1e,stroke:#34d399,color:#e0f7ea
+                </pre>
+            </div>
+        </div>
+        <div class="tip">💡 <strong>Interview:</strong> "Walk me through your architecture" — start from Client layer, go top to bottom.</div>
+    </div>
+
+    <!-- DIAGRAM 2 -->
+    <div class="diagram-section" id="section-2">
+        <h2>2. End-to-End Request Flow — All Layers Traced</h2>
+        <p class="subtitle">How a single API request flows from mobile client through every component and back</p>
+        <div class="diagram-container" data-diagram-id="d2">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d2')">+</button>
+                <button onclick="zoomOut('d2')">−</button>
+                <button onclick="resetZoom('d2')">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d2">
+                <pre class="mermaid">
+flowchart TD
+    subgraph REQ["📱 Request Initiation"]
+        START["Customer taps\n'Transfer $500'"]
+    end
+
+    subgraph GW_LAYER["🔒 Gateway Processing"]
+        CORS["CORS Check"] --> JWT["JWT Token\nValidation"]
+        JWT --> RATE["Rate Limit\n(Redis Bucket)"]
+        RATE --> ROUTE["Route to\nPayment :8082"]
+    end
+
+    subgraph CTRL_LAYER["📡 Controller Layer"]
+        VALID["@Valid\nBean Validation"]
+        IDEMP["Idempotency\nRedis Check"]
+        VALID --> IDEMP
+    end
+
+    subgraph BIZ_LAYER["⚙️ Business Logic"]
+        FRAUD["Fraud Check\n(Redis Velocity)"]
+        SAGA_INIT["Save Transfer\nINITIATED"]
+        DEBIT["Debit Source\n(Circuit Breaker)"]
+        CREDIT["Credit Target\n(Circuit Breaker)"]
+        COMPLETE["Update Status\nCOMPLETED"]
+    end
+
+    subgraph EVENT_LAYER["📨 Event Publishing"]
+        OUTBOX["Write to\nOutbox Table"]
+        POLL["Poller reads\nevery 500ms"]
+        KAFKA["Publish to\nKafka Topic"]
+    end
+
+    subgraph NOTIFY_LAYER["🔔 Notification"]
+        CONSUME["Kafka Consumer\nlistens"]
+        SMS["Send SMS"]
+        EMAIL["Send Email"]
+        PUSH["Send Push"]
+    end
+
+    subgraph RESP["✅ Response"]
+        DONE["200 OK\nTransfer COMPLETED"]
+    end
+
+    START ==> CORS
+    ROUTE ==> VALID
+    IDEMP ==> FRAUD
+    FRAUD ==> SAGA_INIT
+    SAGA_INIT ==> DEBIT
+    DEBIT ==> CREDIT
+    CREDIT ==> COMPLETE
+    COMPLETE ==> OUTBOX
+    OUTBOX --> POLL
+    POLL --> KAFKA
+    KAFKA --> CONSUME
+    CONSUME --> SMS
+    CONSUME --> EMAIL
+    CONSUME --> PUSH
+    COMPLETE ==> DONE
+
+    style REQ fill:#1e3a5f,stroke:#60a5fa,color:#fff
+    style GW_LAYER fill:#1a3636,stroke:#4ade80,color:#fff
+    style CTRL_LAYER fill:#2d1b4e,stroke:#a78bfa,color:#fff
+    style BIZ_LAYER fill:#3b1e1e,stroke:#f87171,color:#fff
+    style EVENT_LAYER fill:#2e2e1e,stroke:#facc15,color:#fff
+    style NOTIFY_LAYER fill:#1e2e1e,stroke:#34d399,color:#fff
+    style RESP fill:#0d3320,stroke:#22c55e,color:#fff
+                </pre>
+            </div>
+        </div>
+        <div class="tip">💡 <strong>Interview:</strong> "Explain how a payment request flows" — trace each colored layer from top to bottom.</div>
+    </div>
+
+    <!-- DIAGRAM 3 -->
+    <div class="diagram-section" id="section-3">
+        <h2>3. System Architecture — All Microservices</h2>
+        <p class="subtitle">High-level view of all services, databases, messaging, and external systems</p>
+        <div class="diagram-container" data-diagram-id="d3">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d3')">+</button>
+                <button onclick="zoomOut('d3')">−</button>
+                <button onclick="resetZoom('d3')">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d3">
+                <pre class="mermaid">
+graph TD
+    Client["Digital Channels\n(iOS / Android / Web)"] -->|HTTPS| GW["API Gateway :8080\nJWT Auth • Redis Rate Limiting"]
+
+    GW --> ACC["Account Service :8081\nLedger • GraphQL • SOAP CBS"]
+    GW --> PAY["Payment Service :8082\nTransfers • Saga • Outbox"]
+    GW --> FX["Forex Service :8083\nFX Rates • Quotes • IBAN"]
+    GW --> CUST["Customer Service :8084\nOnboarding • KYC • Auth"]
+    GW --> LOAN["Loan Service :8085\nEMI • Amortization"]
+    GW --> CARD["Card Service :8086\nPAN • CVV • Controls"]
+    GW --> FRAUD["Fraud Service :8087\nVelocity • Geo • AI"]
+    GW --> REP["Reporting :8089\nPDF • Excel • CSV"]
+    GW --> BATCH["Batch Service :8090\nReconciliation • PL/SQL"]
+    GW --> BILL["Bill Payment :8091\nBiller Gateway"]
+
+    PAY -->|Outbox Poller| KAFKA["Apache Kafka\n(KRaft Mode)"]
+    BILL -->|Events| KAFKA
+    LOAN -->|Events| KAFKA
+    CARD -->|Events| KAFKA
+    KAFKA --> NOTIF["Notification :8088\nEmail • SMS • Push"]
+
+    ACC --> DB[(PostgreSQL)]
+    PAY --> DB
+    LOAN --> DB
+    CARD --> DB
+    ACC --> REDIS[(Redis)]
+    FX --> REDIS
+    FRAUD --> REDIS
+    GW --> REDIS
+
+    ACC -->|SOAP XML| CBS["Legacy CBS\nMainframe"]
+    BATCH --> ORA[(Oracle 19c)]
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 4 -->
+    <div class="diagram-section" id="section-4">
+        <h2>4. Fund Transfer — Saga Orchestrator Sequence</h2>
+        <p class="subtitle">Distributed transaction: debit → credit → compensate if fails → Kafka event → notification</p>
+        <div class="diagram-container" data-diagram-id="d4">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d4')">+</button>
+                <button onclick="zoomOut('d4')">−</button>
+                <button onclick="resetZoom('d4')">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d4">
+                <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor Customer
+    participant GW as API Gateway
+    participant PAY as Payment Service
+    participant FRAUD as Fraud Detection
+    participant ACC as Account Service
+    participant DB as Database
+    participant KAFKA as Kafka
+    participant NOTIF as Notification
+
+    Customer->>GW: POST /transfers + JWT + Idempotency-Key
+    GW->>PAY: Route request
+
+    rect rgb(230, 240, 255)
+    Note over PAY,FRAUD: Step 1: Fraud Check
+    PAY->>FRAUD: Check velocity and geo rules
+    FRAUD-->>PAY: APPROVE (low risk)
+    end
+
+    rect rgb(230, 255, 230)
+    Note over PAY,ACC: Step 2: Debit Source
+    PAY->>DB: Save Transfer (INITIATED)
+    PAY->>ACC: Debit source account
+    ACC-->>PAY: Debit success
+    PAY->>DB: Update (DEBITED)
+    end
+
+    rect rgb(255, 245, 230)
+    Note over PAY,ACC: Step 3: Credit Target
+    PAY->>ACC: Credit target account
+    alt Credit Succeeds
+        ACC-->>PAY: Credit success
+        PAY->>DB: Update (COMPLETED)
+        PAY->>DB: Write outbox event
+    else Credit Fails
+        Note over PAY,ACC: COMPENSATION: Auto-refund
+        PAY->>ACC: Refund source account
+        PAY->>DB: Transfer → COMPENSATED
+    end
+    end
+
+    rect rgb(245, 235, 255)
+    Note over PAY,NOTIF: Step 4: Async Event
+    PAY->>KAFKA: Publish event via outbox
+    KAFKA->>NOTIF: Consume → SMS + Push
+    end
+
+    PAY-->>Customer: Transfer result
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 5 -->
+    <div class="diagram-section" id="section-5">
+        <h2>5. Transfer State Machine</h2>
+        <p class="subtitle">All possible states a fund transfer can be in</p>
+        <div class="diagram-container" data-diagram-id="d5">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d5')">+</button>
+                <button onclick="zoomOut('d5')">−</button>
+                <button onclick="resetZoom('d5')">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d5">
+                <pre class="mermaid">
+stateDiagram-v2
+    [*] --> INITIATED
+    INITIATED --> DEBITED : Source account debited
+    DEBITED --> COMPLETED : Target credited OK
+    DEBITED --> COMPENSATING : Target credit failed
+    COMPENSATING --> COMPENSATED : Source refunded
+    COMPENSATED --> [*]
+    COMPLETED --> [*]
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 6 -->
+    <div class="diagram-section" id="section-6">
+        <h2>6. JWT Authentication Flow</h2>
+        <p class="subtitle">Login → token issue → authenticated request → token refresh lifecycle</p>
+        <div class="diagram-container" data-diagram-id="d6">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d6')">+</button>
+                <button onclick="zoomOut('d6')">−</button>
+                <button onclick="resetZoom('d6')">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d6">
+                <pre class="mermaid">
+sequenceDiagram
+    autonumber
+    actor User as Mobile / Web
+    participant Auth as Auth Controller
+    participant Filter as JWT Filter
+    participant API as Banking APIs
+    participant DB as Customer DB
+
+    Note over User, DB: Phase 1 — Login
+    User->>Auth: POST /auth/login (username, password)
+    Auth->>DB: Verify BCrypt password
+    Auth-->>User: Access Token (15 min) + Refresh Token (7 day)
+
+    Note over User, API: Phase 2 — API Call
+    User->>Filter: GET /accounts (Bearer token)
+    Filter->>Filter: Verify HMAC-SHA256 + expiry + roles
+    Filter->>API: SecurityContext set → execute
+    API-->>User: 200 OK
+
+    Note over User, Auth: Phase 3 — Token Refresh
+    User->>Filter: GET /accounts (expired)
+    Filter-->>User: 401 Unauthorized
+    User->>Auth: POST /auth/refresh
+    Auth->>DB: Rotate refresh token
+    Auth-->>User: New tokens issued
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 7 -->
+    <div class="diagram-section" id="section-7">
+        <h2>7. Kafka Outbox Pattern</h2>
+        <p class="subtitle">How DB writes and Kafka events stay consistent — no dual-write problem</p>
+        <div class="diagram-container" data-diagram-id="d7">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d7')">+</button>
+                <button onclick="zoomOut('d7')">−</button>
+                <button onclick="resetZoom('d7')">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d7">
+                <pre class="mermaid">
+flowchart LR
+    subgraph SVC["Payment Service"]
+        API["REST API"] --> BL["Business Logic"]
+        BL --> DB[("Database")]
+        BL --> OT["Outbox Table\n(PENDING)"]
+        OP["Outbox Poller\n(Scheduled)"] --> OT
+    end
+
+    OP -->|Publish| K["Apache Kafka"]
+
+    subgraph CONSUMERS["Downstream Consumers"]
+        K --> N["Notification\nSMS / Email / Push"]
+        K --> F["Fraud\nVelocity Update"]
+        K --> R["Reporting\nAudit Log"]
+    end
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 8 -->
+    <div class="diagram-section" id="section-8">
+        <h2>8. API Gateway — Routing & Rate Limiting</h2>
+        <p class="subtitle">Request filtering pipeline before reaching any microservice</p>
+        <div class="diagram-container" data-diagram-id="d8">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d8')">+</button>
+                <button onclick="zoomOut('d8')">−</button>
+                <button onclick="resetZoom('d8')">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d8">
+                <pre class="mermaid">
+flowchart TD
+    CLIENT["Client Request"] --> JWT{"JWT Valid?"}
+    JWT -->|No| REJECT["401 Unauthorized"]
+    JWT -->|Yes| RL{"Rate Limit OK?"}
+    RL -->|No| THROTTLE["429 Too Many Requests"]
+    RL -->|Yes| ROUTE{"Route Match"}
+
+    ROUTE --> A1["/accounts → :8081"]
+    ROUTE --> A2["/payments → :8082"]
+    ROUTE --> A3["/exchange-rates → :8083"]
+    ROUTE --> A4["/customers → :8084"]
+    ROUTE --> A5["/loans → :8085"]
+    ROUTE --> A6["/cards → :8086"]
+    ROUTE --> A7["/fraud → :8087"]
+    ROUTE --> A8["/bills → :8091"]
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 9 -->
+    <div class="diagram-section" id="section-9">
+        <h2>9. Fraud Detection — Risk Scoring Engine</h2>
+        <p class="subtitle">How transactions are scored and classified into risk tiers</p>
+        <div class="diagram-container" data-diagram-id="d9">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d9')">+</button>
+                <button onclick="zoomOut('d9')">−</button>
+                <button onclick="resetZoom('d9')">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d9">
+                <pre class="mermaid">
+flowchart TD
+    TXN["Incoming Transaction"] --> VEL{"Velocity Check\n(Redis ZADD/ZCOUNT)"}
+    VEL -->|"> 5 txns/60s"| HIGH["+40 Points"]
+    VEL -->|Normal| AMT{"Amount Check"}
+
+    AMT -->|"> $10K"| MED["+30 Points"]
+    AMT -->|Normal| GEO{"Geo Check\n(Country mismatch)"}
+
+    GEO -->|Mismatch| GEO_PTS["+25 Points"]
+    GEO -->|Match| ZERO["+0 Points"]
+
+    HIGH --> TOTAL["Total Risk Score"]
+    MED --> TOTAL
+    GEO_PTS --> TOTAL
+    ZERO --> TOTAL
+
+    TOTAL --> T{"Risk Tier"}
+    T -->|0-24| APPROVE["✅ AUTO APPROVE"]
+    T -->|25-49| MONITOR["👁️ POST-SETTLEMENT MONITOR"]
+    T -->|50-79| STEP["🔐 STEP-UP AUTH"]
+    T -->|80-100| BLOCK["🚫 IMMEDIATE HOLD"]
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 10 -->
+    <div class="diagram-section" id="section-10">
+        <h2>10. CI/CD Pipeline</h2>
+        <p class="subtitle">Automated delivery: code push to production deployment</p>
+        <div class="diagram-container" data-diagram-id="d10">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d10')">+</button>
+                <button onclick="zoomOut('d10')">−</button>
+                <button onclick="resetZoom('d10')">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d10">
+                <pre class="mermaid">
+flowchart LR
+    GIT["Git Push"] --> BUILD["Maven Build\n+ JUnit Tests"]
+    BUILD --> COV["JaCoCo\nCoverage"]
+    COV --> SONAR["SonarQube\nQuality Gate"]
+    SONAR --> OWASP["OWASP\nDep Check"]
+    OWASP --> DOCKER["Docker\nMulti-Stage Build"]
+    DOCKER --> ECR["Push to\nAWS ECR"]
+    ECR --> HELM["Helm Deploy\nto AWS EKS"]
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 11 -->
+    <div class="diagram-section" id="section-11">
+        <h2>11. Reconciliation Engine</h2>
+        <p class="subtitle">End-of-day matching of internal ledger vs external clearing records</p>
+        <div class="diagram-container" data-diagram-id="d11">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d11')">+</button>
+                <button onclick="zoomOut('d11')">−</button>
+                <button onclick="resetZoom('d11')">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d11">
+                <pre class="mermaid">
+flowchart TD
+    TRIGGER["Trigger Recon Run"] --> EXT["Fetch External\nClearing Records"]
+    EXT --> INT["Load Internal\nLedger Records"]
+    INT --> STRAT{"Matching Strategy"}
+
+    STRAT -->|Exact| EM["Match by\nRef ID + Amount"]
+    STRAT -->|Tolerance| TW["Match within\n±threshold"]
+
+    EM --> RES["Results"]
+    TW --> RES
+
+    RES --> MATCHED["✅ Matched\n(Count + Rate %)"]
+    RES --> BREAKS["❌ Breaks\n(Mismatches / Orphans)"]
+
+    BREAKS --> PERSIST["Persist with\nAudit Trail"]
+    PERSIST --> RESOLVE["Manual Resolution\nby Auditor"]
+                </pre>
+            </div>
+        </div>
+    </div>
+
+    <!-- DIAGRAM 12 -->
+    <div class="diagram-section" id="section-12">
+        <h2>12. Service Communication Map</h2>
+        <p class="subtitle">Sync (REST) and Async (Kafka) communication between all services</p>
+        <div class="diagram-container" data-diagram-id="d12">
+            <div class="diagram-controls">
+                <button onclick="zoomIn('d12')">+</button>
+                <button onclick="zoomOut('d12')">−</button>
+                <button onclick="resetZoom('d12')">⟳</button>
+            </div>
+            <div class="diagram-inner" id="d12">
+                <pre class="mermaid">
+flowchart TD
+    GW["API Gateway"] -->|REST| ACC["Account"]
+    GW -->|REST| PAY["Payment"]
+    GW -->|REST| CUST["Customer"]
+    GW -->|REST| LOAN["Loan"]
+    GW -->|REST| CARD["Card"]
+    GW -->|REST| FX["Forex"]
+    GW -->|REST| BILL["Bill Pay"]
+    GW -->|GraphQL| ACC
+
+    PAY -->|REST| ACC
+    PAY -->|REST| FRAUD["Fraud"]
+    PAY -.->|Kafka| NOTIF["Notification"]
+    LOAN -.->|Kafka| NOTIF
+    CARD -.->|Kafka| NOTIF
+    BILL -.->|Kafka| NOTIF
+    CUST -.->|Kafka| NOTIF
+
+    ACC -->|SOAP| CBS["Legacy CBS"]
+    ACC --> DB[("PostgreSQL")]
+    PAY --> DB
+    BATCH["Batch"] --> ORA[("Oracle 19c")]
+    FX --> REDIS[("Redis")]
+    FRAUD --> REDIS
+    GW --> REDIS
+                </pre>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    // Initialize Mermaid
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        securityLevel: 'loose',
+        flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis' },
+        sequence: { useMaxWidth: false, actorMargin: 50, messageMargin: 40 }
+    });
+
+    // Zoom/Pan State
+    const states = {};
+
+    function getState(id) {
+        if (!states[id]) states[id] = { scale: 1, x: 0, y: 0, dragging: false };
+        return states[id];
+    }
+
+    function applyTransform(id) {
+        const s = getState(id);
+        const el = document.getElementById(id);
+        el.style.transform = `translate(${s.x}px, ${s.y}px) scale(${s.scale})`;
+    }
+
+    function zoomIn(id) { const s = getState(id); s.scale = Math.min(s.scale * 1.25, 5); applyTransform(id); }
+    function zoomOut(id) { const s = getState(id); s.scale = Math.max(s.scale * 0.8, 0.2); applyTransform(id); }
+    function resetZoom(id) { const s = getState(id); s.scale = 1; s.x = 0; s.y = 0; applyTransform(id); }
+
+    // Mouse wheel zoom
+    document.querySelectorAll('.diagram-container').forEach(container => {
+        const inner = container.querySelector('.diagram-inner');
+        const id = inner.id;
+
+        container.addEventListener('wheel', e => {
+            e.preventDefault();
+            const s = getState(id);
+            s.scale *= e.deltaY < 0 ? 1.1 : 0.9;
+            s.scale = Math.max(0.2, Math.min(5, s.scale));
+            applyTransform(id);
+        }, { passive: false });
+
+        // Drag to pan
+        container.addEventListener('mousedown', e => {
+            const s = getState(id);
+            s.dragging = true;
+            s.startX = e.clientX - s.x;
+            s.startY = e.clientY - s.y;
+        });
+
+        container.addEventListener('mousemove', e => {
+            const s = getState(id);
+            if (!s.dragging) return;
+            s.x = e.clientX - s.startX;
+            s.y = e.clientY - s.startY;
+            applyTransform(id);
+        });
+
+        container.addEventListener('mouseup', () => { getState(id).dragging = false; });
+        container.addEventListener('mouseleave', () => { getState(id).dragging = false; });
+    });
+
+    // Build navigation
+    const sections = document.querySelectorAll('.diagram-section');
+    const nav = document.getElementById('navBar');
+    sections.forEach((sec, i) => {
+        const title = sec.querySelector('h2').textContent;
+        const btn = document.createElement('button');
+        btn.textContent = title;
+        btn.onclick = () => {
+            sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            nav.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        };
+        nav.appendChild(btn);
+    });
+</script>
+
+</body>
+</html>

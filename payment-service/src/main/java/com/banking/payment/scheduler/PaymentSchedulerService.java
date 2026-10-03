@@ -1,5 +1,6 @@
 package com.banking.payment.scheduler;
 
+import com.banking.payment.client.AccountClient;
 import com.banking.payment.domain.StandingInstruction;
 import com.banking.payment.domain.Transfer;
 import com.banking.payment.domain.TransferStatus;
@@ -17,6 +18,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * Enterprise Payment Schedulers & Background Cron Processing:
@@ -32,15 +34,18 @@ public class PaymentSchedulerService {
     private final TransferSagaOrchestrator sagaOrchestrator;
     private final StandingInstructionRepository instructionRepository;
     private final StandingInstructionService instructionService;
+    private final AccountClient accountClient;
 
     public PaymentSchedulerService(TransferRepository transferRepository,
                                    TransferSagaOrchestrator sagaOrchestrator,
                                    StandingInstructionRepository instructionRepository,
-                                   StandingInstructionService instructionService) {
+                                   StandingInstructionService instructionService,
+                                   AccountClient accountClient) {
         this.transferRepository = transferRepository;
         this.sagaOrchestrator = sagaOrchestrator;
         this.instructionRepository = instructionRepository;
         this.instructionService = instructionService;
+        this.accountClient = accountClient;
     }
 
     /**
@@ -65,9 +70,21 @@ public class PaymentSchedulerService {
                     t.getId(), t.getSagaId(), t.getStatus());
 
             if (t.getStatus() == TransferStatus.DEBITED) {
-                // Funds were debited from source but never credited to target: trigger Saga compensation
-                t.markFailed("GATEWAY_TIMEOUT: Auto-compensated by payment recovery scheduler");
-                transferRepository.save(t);
+                // Funds were debited from source but never credited to target: execute compensating credit
+                try {
+                    String compensationCorrId = "comp_recovery_" + UUID.randomUUID();
+                    accountClient.credit(t.getSourceAccount(), t.getAmount(), compensationCorrId);
+                    t.updateStatus(TransferStatus.COMPENSATED);
+                    t.markFailed("GATEWAY_TIMEOUT: Auto-compensated by payment recovery scheduler. Funds returned to source account.");
+                    transferRepository.save(t);
+                    log.info("Saga compensation successful for transferId={}: credited {} {} back to source account {}",
+                            t.getId(), t.getAmount(), t.getCurrency(), t.getSourceAccount());
+                } catch (Exception compEx) {
+                    log.error("CRITICAL: Saga compensation FAILED for transferId={}! Manual intervention required. Source account {} may have lost {} {}. Cause: {}",
+                            t.getId(), t.getSourceAccount(), t.getAmount(), t.getCurrency(), compEx.getMessage());
+                    t.markFailed("CRITICAL: Compensation failed during recovery — manual intervention required: " + compEx.getMessage());
+                    transferRepository.save(t);
+                }
             } else if (t.getStatus() == TransferStatus.INITIATED) {
                 t.markFailed("TRANSACTION_EXPIRED: Abandoned before debit execution");
                 transferRepository.save(t);

@@ -20,8 +20,9 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
     public String convertToDatabaseColumn(String attribute) {
         if (attribute == null) return null;
         if (cryptoService == null) {
-            // Fallback for static initialization contexts
-            cryptoService = new AesGcmCryptoService("BankingEnterpriseSecretMasterKey2026!");
+            throw new IllegalStateException(
+                    "AesGcmCryptoService has not been initialized by Spring DI. " +
+                    "Ensure the converter is used within a Spring-managed context.");
         }
         return cryptoService.encrypt(attribute);
     }
@@ -30,7 +31,9 @@ public class EncryptedStringConverter implements AttributeConverter<String, Stri
     public String convertToEntityAttribute(String dbData) {
         if (dbData == null) return null;
         if (cryptoService == null) {
-            cryptoService = new AesGcmCryptoService("BankingEnterpriseSecretMasterKey2026!");
+            throw new IllegalStateException(
+                    "AesGcmCryptoService has not been initialized by Spring DI. " +
+                    "Ensure the converter is used within a Spring-managed context.");
         }
         return cryptoService.decrypt(dbData);
     }

@@ -48,7 +48,7 @@ public class AccountGraphQLController {
     @QueryMapping
     public Map<String, Object> accountBalance(@Argument String accountNumber) {
         BigDecimal balance = accountService.getAvailableBalance(accountNumber);
-        return Map.of("accountNumber", accountNumber, "availableBalance", balance.doubleValue());
+        return Map.of("accountNumber", accountNumber, "availableBalance", balance.toPlainString());
     }
 
     @QueryMapping
@@ -77,26 +77,26 @@ public class AccountGraphQLController {
                 input.customerId(),
                 input.accountType(),
                 input.currency(),
-                BigDecimal.valueOf(input.initialDeposit())
+                new BigDecimal(input.initialDeposit())
         );
         return accountService.createAccount(request);
     }
 
     @MutationMapping
-    public AccountResponseDto debitAccount(@Argument String accountNumber, @Argument Float amount) {
+    public AccountResponseDto debitAccount(@Argument String accountNumber, @Argument String amount) {
         return accountService.debitAccount(
                 accountNumber,
-                BigDecimal.valueOf(amount),
+                new BigDecimal(amount),
                 UUID.randomUUID().toString(),
                 "GRAPHQL_CLIENT"
         );
     }
 
     @MutationMapping
-    public AccountResponseDto creditAccount(@Argument String accountNumber, @Argument Float amount) {
+    public AccountResponseDto creditAccount(@Argument String accountNumber, @Argument String amount) {
         return accountService.creditAccount(
                 accountNumber,
-                BigDecimal.valueOf(amount),
+                new BigDecimal(amount),
                 UUID.randomUUID().toString(),
                 "GRAPHQL_CLIENT"
         );
@@ -108,7 +108,7 @@ public class AccountGraphQLController {
                 input.transactionRef(),
                 input.sourceAccount(),
                 input.targetAccount(),
-                BigDecimal.valueOf(input.amount()),
+                new BigDecimal(input.amount()),
                 input.currency(),
                 input.narration(),
                 "GRAPHQL_SOA_MIDDLEWARE"
@@ -126,7 +126,7 @@ public class AccountGraphQLController {
                         input.customerId(),
                         input.parentAccountNumber(),
                         input.vaultName(),
-                        BigDecimal.valueOf(input.targetAmount()),
+                        new BigDecimal(input.targetAmount()),
                         input.currency(),
                         targetDate,
                         input.autoRoundupEnabled()
@@ -135,18 +135,18 @@ public class AccountGraphQLController {
     }
 
     @MutationMapping
-    public SavingVaultResponseDto depositToVault(@Argument String vaultId, @Argument Float amount) {
-        return vaultService.depositToVault(vaultId, BigDecimal.valueOf(amount));
+    public SavingVaultResponseDto depositToVault(@Argument String vaultId, @Argument String amount) {
+        return vaultService.depositToVault(vaultId, new BigDecimal(amount));
     }
 
     @MutationMapping
-    public SavingVaultResponseDto withdrawFromVault(@Argument String vaultId, @Argument Float amount) {
-        return vaultService.withdrawFromVault(vaultId, BigDecimal.valueOf(amount));
+    public SavingVaultResponseDto withdrawFromVault(@Argument String vaultId, @Argument String amount) {
+        return vaultService.withdrawFromVault(vaultId, new BigDecimal(amount));
     }
 
-    public record OpenAccountInput(String customerId, AccountType accountType, String currency, Double initialDeposit) {}
+    public record OpenAccountInput(String customerId, AccountType accountType, String currency, String initialDeposit) {}
 
-    public record CreateSavingVaultInput(String customerId, String parentAccountNumber, String vaultName, Double targetAmount, String currency, String targetDate, Boolean autoRoundupEnabled) {}
+    public record CreateSavingVaultInput(String customerId, String parentAccountNumber, String vaultName, String targetAmount, String currency, String targetDate, Boolean autoRoundupEnabled) {}
 
-    public record LegacyCbsPostInput(String transactionRef, String sourceAccount, String targetAccount, Double amount, String currency, String narration) {}
+    public record LegacyCbsPostInput(String transactionRef, String sourceAccount, String targetAccount, String amount, String currency, String narration) {}
 }

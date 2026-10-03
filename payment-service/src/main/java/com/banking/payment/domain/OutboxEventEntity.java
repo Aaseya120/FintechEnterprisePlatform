@@ -19,6 +19,8 @@ import java.time.Instant;
 @NoArgsConstructor
 public class OutboxEventEntity {
 
+    private static final int MAX_RETRY_COUNT = 5;
+
     @Id
     @Column(name = "id", length = 36, nullable = false)
     private String id;
@@ -71,5 +73,8 @@ public class OutboxEventEntity {
 
     public void incrementRetry() {
         this.retryCount++;
+        if (this.retryCount >= MAX_RETRY_COUNT) {
+            this.status = "DEAD_LETTER";
+        }
     }
 }

@@ -1,6 +1,9 @@
 package com.banking.common.crypto;
 
 import com.banking.common.exception.BankingException;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,6 +20,7 @@ import java.util.Base64;
 @Service
 public class AesGcmCryptoService {
 
+    private static final Logger log = LoggerFactory.getLogger(AesGcmCryptoService.class);
     private static final String ALGORITHM = "AES/GCM/NoPadding";
     private static final int TAG_LENGTH_BIT = 128;
     private static final int IV_LENGTH_BYTE = 12; // 96 bits recommended for GCM
@@ -25,12 +29,24 @@ public class AesGcmCryptoService {
     private final SecretKey secretKey;
 
     public AesGcmCryptoService(
-            @Value("${banking.security.encryption.master-key:BankingEnterpriseSecretMasterKey2026!}") String masterKey) {
+            @Value("${banking.security.encryption.master-key}") String masterKey) {
         // Ensure 256-bit key length (32 bytes)
         byte[] keyBytes = new byte[32];
         byte[] source = masterKey.getBytes(StandardCharsets.UTF_8);
         System.arraycopy(source, 0, keyBytes, 0, Math.min(source.length, 32));
         this.secretKey = new SecretKeySpec(keyBytes, "AES");
+    }
+
+    @PostConstruct
+    void validateKeyConfiguration() {
+        // Smoke-test: ensure key can encrypt/decrypt a known value
+        String testValue = "crypto_init_selftest";
+        String encrypted = encrypt(testValue);
+        String decrypted = decrypt(encrypted);
+        if (!testValue.equals(decrypted)) {
+            throw new IllegalStateException("AES-GCM encryption self-test failed. Master key may be corrupted or misconfigured.");
+        }
+        log.info("AES-256-GCM encryption service initialized and self-test passed successfully.");
     }
 
     /**
@@ -61,16 +77,16 @@ public class AesGcmCryptoService {
 
     /**
      * Decrypts Base64([IV][Ciphertext + Tag]) payload with authentication verification.
+     * Throws BankingException on tampered or corrupt ciphertext instead of silently returning raw data.
      */
     public String decrypt(String cipherTextBase64) {
         if (cipherTextBase64 == null) return null;
-        if (cipherTextBase64.startsWith("ENC:AES-GCM:")) {
-            return cipherTextBase64.substring("ENC:AES-GCM:".length());
-        }
         try {
             byte[] decoded = Base64.getDecoder().decode(cipherTextBase64);
             if (decoded.length < IV_LENGTH_BYTE + 16) {
-                return cipherTextBase64;
+                throw new BankingException("CRYPTO_DECRYPT_ERROR",
+                        "Ciphertext too short to contain valid AES-GCM payload (IV + AuthTag minimum)",
+                        HttpStatus.INTERNAL_SERVER_ERROR);
             }
 
             ByteBuffer byteBuffer = ByteBuffer.wrap(decoded);
@@ -86,9 +102,16 @@ public class AesGcmCryptoService {
 
             byte[] plainTextBytes = cipher.doFinal(cipherText);
             return new String(plainTextBytes, StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            // Graceful fallback for legacy unencrypted records during staged schema migration
+        } catch (BankingException e) {
+            throw e;
+        } catch (IllegalArgumentException e) {
+            // Not valid Base64 — likely a legacy plaintext value from pre-encryption migration
+            log.warn("Decrypt encountered non-Base64 value (likely pre-encryption legacy data): returning as-is");
             return cipherTextBase64;
+        } catch (Exception e) {
+            throw new BankingException("CRYPTO_DECRYPT_ERROR",
+                    "Failed to decrypt data. Ciphertext may be tampered or encrypted with a different key.",
+                    HttpStatus.INTERNAL_SERVER_ERROR, e);
         }
     }
 }

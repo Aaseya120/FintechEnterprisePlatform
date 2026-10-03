@@ -42,7 +42,7 @@ public class UpiPaymentProcessor implements PaymentProcessorStrategy {
         }
 
         // Generate 12-digit NPCI standard Retrieval Reference Number (RRN)
-        String rrn = String.valueOf(100000000000L + (long)(RANDOM.nextDouble() * 900000000000L));
+        String rrn = String.valueOf(100000000000L + RANDOM.nextLong(900000000000L));
         String txnRef = "UPI_" + UUID.randomUUID().toString().replace("-", "").substring(0, 12);
 
         log.info("Processed UPI transaction [VPA: {}, Amount: {} {}, RRN: {}, corr: {}]",

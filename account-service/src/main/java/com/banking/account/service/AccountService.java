@@ -167,7 +167,7 @@ public class AccountService {
     }
 
     private String generateAccountNumber() {
-        long randomNum = 1000000000L + (long)(RANDOM.nextDouble() * 9000000000L);
+        long randomNum = 1000000000L + RANDOM.nextLong(9000000000L);
         return "US" + randomNum;
     }
 }

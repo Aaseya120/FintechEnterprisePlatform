@@ -152,14 +152,14 @@ public class CustomerKycService {
         Customer savedCustomer = customerRepository.save(customer);
 
         // 2. Generate Primary Bank Account Number
-        String primaryAccountNumber = "ACC" + (1000000000L + (long) (RANDOM.nextDouble() * 9000000000L));
+        String primaryAccountNumber = "ACC" + (1000000000L + RANDOM.nextLong(9000000000L));
 
         // 3. Generate Secure Login Credentials via CustomerAuthService
         InitialCredentialDto creds = authService.provisionInitialCredentials(savedCustomer);
         String loginUsername = creds.getUsername();
         String temporaryPassword = creds.getTemporaryPassword();
 
-        // 4. Emit Customer Onboarded Event to Kafka
+        // 4. Emit Customer Onboarded Event to Kafka (credentials excluded for security)
         Map<String, Object> event = new HashMap<>();
         event.put("customerId", savedCustomer.getId());
         event.put("customerNumber", savedCustomer.getCustomerNumber());
@@ -167,8 +167,7 @@ public class CustomerKycService {
         event.put("email", savedCustomer.getEmail());
         event.put("phone", savedCustomer.getPhone());
         event.put("primaryAccountNumber", primaryAccountNumber);
-        event.put("loginUsername", loginUsername);
-        event.put("temporaryPassword", temporaryPassword);
+        event.put("credentialsProvisioned", true);
         event.put("approvedAt", Instant.now().toString());
 
         kafkaTemplate.send("banking.customer.onboarded", savedCustomer.getId(), event)

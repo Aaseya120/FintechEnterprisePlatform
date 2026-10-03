@@ -100,6 +100,10 @@ public class AccountRestController {
             @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId) {
         String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();
         BigDecimal amount = payload.get("amount");
+        if (amount == null) {
+            throw new com.banking.common.exception.BankingException("MISSING_AMOUNT",
+                    "Request body must contain 'amount' field", org.springframework.http.HttpStatus.BAD_REQUEST);
+        }
         String actorId = SecurityUtils.getCurrentUserId().orElse("SYSTEM");
         AccountResponseDto updated = accountService.debitAccount(accountNumber, amount, corrId, actorId);
         return ResponseEntity.ok(ApiResponse.success(updated, "Account debited successfully", corrId));
@@ -116,6 +120,10 @@ public class AccountRestController {
             @RequestHeader(value = "X-Correlation-ID", required = false) String correlationId) {
         String corrId = (correlationId != null) ? correlationId : UUID.randomUUID().toString();
         BigDecimal amount = payload.get("amount");
+        if (amount == null) {
+            throw new com.banking.common.exception.BankingException("MISSING_AMOUNT",
+                    "Request body must contain 'amount' field", org.springframework.http.HttpStatus.BAD_REQUEST);
+        }
         String actorId = SecurityUtils.getCurrentUserId().orElse("SYSTEM");
         AccountResponseDto updated = accountService.creditAccount(accountNumber, amount, corrId, actorId);
         return ResponseEntity.ok(ApiResponse.success(updated, "Account credited successfully", corrId));

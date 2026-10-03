@@ -64,7 +64,7 @@ public class LoanService {
     @Transactional
     public LoanResponseDto applyForLoan(LoanApplicationRequestDto req) {
         BigDecimal emi = computeMonthlyEmi(req.principalAmount(), req.annualInterestRate(), req.tenureMonths());
-        String loanAccountNum = "LN" + (1000000000L + (long)(RANDOM.nextDouble() * 9000000000L));
+        String loanAccountNum = "LN" + (1000000000L + RANDOM.nextLong(9000000000L));
 
         Loan loan = new Loan(
                 UUID.randomUUID().toString(),
@@ -329,6 +329,10 @@ public class LoanService {
     }
 
     private BigDecimal computeMonthlyEmi(BigDecimal principal, BigDecimal annualRate, int months) {
+        if (annualRate.compareTo(BigDecimal.ZERO) == 0) {
+            // 0% interest promotional loan: EMI = principal / months
+            return principal.divide(BigDecimal.valueOf(months), 2, RoundingMode.HALF_UP);
+        }
         double p = principal.doubleValue();
         double r = annualRate.doubleValue() / (12 * 100);
         double emi = (p * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
